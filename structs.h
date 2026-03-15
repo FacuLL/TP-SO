@@ -32,7 +32,7 @@ typedef struct {
     sem_t next_variable_mutex; // Mutex para la siguiente variable
     unsigned int readers_count; // Cantidad de jugadores leyendo el estado
     sem_t can_player_move[9]; // Le indican a cada jugador que puede enviar 1 movimiento
-} State;
+} SyncState;
 
 
 #endif
