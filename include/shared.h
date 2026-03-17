@@ -6,6 +6,6 @@
     #include <stdio.h>
     #include <sys/mman.h>
 
-    void * initializeShared(const * name, unsigned long size)
+    void * initializeShared(const * name, unsigned long size);
 
 #endif

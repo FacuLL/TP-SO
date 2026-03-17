@@ -75,8 +75,10 @@ void initializeArgs(int argc, char const *argv[], Game * game) {
         }
     }
 
-    game->board = initializeShared("/game_state", sizeof(Game) * game->width * game->height * sizeof(char));
-    game->board += sizeof(Game);
+    // El tamaño es el struct + El tamaño del tablero y como estan solapados en el char *, resto su tamaño.
+    unsigned long newSize = sizeof(Game) * game->width * game->height * sizeof(char) - sizeof(char *);
+    munmap(game, sizeof(Game));
+    game = initializeShared("/game_state", newSize);
 }
 
 void exitError(const char * error) {
