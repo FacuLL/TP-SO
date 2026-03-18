@@ -1,45 +1,94 @@
-#include "defaultValues.h"
-#include "structs.h"
+#include <getopt.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <unistd.h>
+#include "include/defaultValues.h"
+#include "include/structs.h"
+#include "include/shared.h"
+#include "include/semaphores.h"
 
-void initializeSemaphores(SyncState * state, Game * game){
-        // sem_init(sem_t *sem, int pshared, unsigned int value)
-        //*sem: Puntero a semaforo ; 
-        //pshared: 0 si no comparte con otro proceso, != 0 si lo va a hacer, en ese caso debe ser colocado en una region de memoria compartida; 
-        //value: Valor inicial 
-    if (sem_init(state->has_to_print, SHARED_MEMORY, 1) == -1) {
-        perror("sem_init failed");
-        exit(EXIT_FAILURE);
-    }
-    if (sem_init(state->view_finished, SHARED_MEMORY, 1) == -1) {
-        perror("sem_init failed");
-        exit(EXIT_FAILURE);
-    }
-    if (sem_init(state->master_mutex, SHARED_MEMORY, 1) == -1) {
-        perror("sem_init failed");
-        exit(EXIT_FAILURE);
-    }
-    if (sem_init(state->game_state_mutex, SHARED_MEMORY, 1) == -1) {
-        perror("sem_init failed");
-        exit(EXIT_FAILURE);
-    }
-    if (sem_init(state->next_variable_mutex, SHARED_MEMORY, 1) == -1) {
-        perror("sem_init failed");
-        exit(EXIT_FAILURE);
-    }
-    state->readers_count=0;
-    for(int i = 0 ; i < game->num_players ; i++){
-        if (sem_init(state->can_player_move[i], SHARED_MEMORY, 1) == -1){
-            perror("sem_init failed");
-            exit(EXIT_FAILURE);
-        }
-    }
-}
+void initializeArgs(int argc, char const *argv[], Game * game);
+
+int delay = DELAY;
+int timeout = TIMEOUT;
+int seed;
+char * view_path = VIEW;
+char * players_paths[9] = {};
+
 
 
 int main(int argc, char const *argv[])
 {
     
 
+    Game * game = initializeShared("/game_state", sizeof(Game));
+    if (game == NULL) return 1;
+
+    SyncState * sync = initializeShared("/game_sync", sizeof(SyncState));
+    if (sync == NULL) return 1;
+
+    //initializeArgs(argc, argv, game);
+
+    // Incializamos la vista, si hay
+
+    // Inicializamos los players
+
+    // Logica en cada tick
 
     return 0;
+}
+
+void initializeArgs(int argc, char const *argv[], Game * game) {
+    game->width = WIDTH;
+    game->height = HEIGHT;
+    game->game_over = false;
+    seed = SEED;
+
+    int opt;
+    while ((opt = getopt(argc, argv, "w:h:d:t:s:v:p")) != -1) {
+        switch (opt) {
+            case 'w':
+                game->width = atoi(optarg);
+                if (game->width < 10) exitError("El width debe ser mayor o igual a 10");
+                break;
+            case 'h':
+                game->height = atoi(optarg);
+                if (game->height < 10) exitError("El height debe ser mayor o igual a 10");
+                break;
+            case 'd':
+                delay = atoi(optarg);
+                break;
+            case 't':
+                timeout = atoi(optarg);
+                break;
+            case 's':
+                seed = (unsigned int)atoi(optarg);
+                break;
+            case 'v':
+                view_path = optarg;
+                break;
+            case 'p':
+                int num_players = 0;
+                while (optind < argc && argv[optind][0] != '-') {
+                    if (num_players > 9) exitError("No deben haber más de 9 jugadores");
+                    players_paths[num_players++] = argv[optind++];
+                }
+                if (num_players == 0) exitError("Debe haber al menos un jugador");
+                game->num_players = num_players;
+                break;
+            default:
+                fprintf(stderr, "Uso: %s [-w width] [-h height] [-d delay] [-t timeout] [-s seed] [-v view] -p player1 [player2...]\n", argv[0]);
+                exit(1);
+        }
+    }
+
+    // El tamaño es el struct + El tamaño del tablero y como estan solapados en el char *, resto su tamaño.
+    unsigned long newSize = sizeof(Game) * game->width * game->height * sizeof(char) - sizeof(char *);
+    munmap(game, sizeof(Game));
+    game = initializeShared("/game_state", newSize);
+}
+
+void exitError(const char * error) {
+    fprintf(stderr, error);
+    exit(1);
 }

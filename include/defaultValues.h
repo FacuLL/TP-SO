@@ -1,7 +1,6 @@
-#include <time.h>
-
 #ifndef DEFAULTVALUES_H
 #define DEFAULTVALUES_H
+#include <time.h>
     
     #define WIDTH 10
     #define HEIGHT 10
@@ -11,7 +10,7 @@
     #define VIEW NULL
     #define MIN_PLAYERS 1
     #define MAX_PLAYERS 9
-    #define EXIT_FAILURE -1
+    //#define EXIT_FAILURE -1
     #define NOT_SHARED_MEMORY 1
     #define SHARED_MEMORY 1
 
