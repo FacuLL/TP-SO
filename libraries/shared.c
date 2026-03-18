@@ -1,6 +1,6 @@
 #include "shared.h"
 
-void * initializeShared(const * name, unsigned long size) {
+void * initializeShared(const char * name, unsigned long size) {
     int fd = shm_open(name, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
     
     if (fd == -1) {
