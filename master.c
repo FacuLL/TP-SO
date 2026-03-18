@@ -2,10 +2,10 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
-#include "include/defaultValues.h"
-#include "include/structs.h"
-#include "include/shared.h"
-#include "include/semaphores.h"
+#include "defaultValues.h"
+#include "structs.h"
+#include "shared.h"
+#include "semaphores.h"
 
 int delay = DELAY;
 int timeout = TIMEOUT;
@@ -13,7 +13,7 @@ int seed;
 char * view_path = VIEW;
 char * players_paths[9] = {};
 
-void initializeArgs(int argc, char *argv[], Game * game);
+void initializeArgs(int argc, char *argv[], Game **game);
 void exitError(const char * error);
 
 int main(int argc, char *argv[])
@@ -21,15 +21,18 @@ int main(int argc, char *argv[])
 
     // Incializamos las memorias compartidas
 
+    printf("Inizialización de memoria \n");
+
     Game * game = initializeShared("/game_state", sizeof(Game));
     if (game == NULL) return 1;
 
     SyncState * sync = initializeShared("/game_sync", sizeof(SyncState));
     if (sync == NULL) return 1;
-
     //Colocamos los datos iniciales
+    
+    initializeArgs(argc, argv, &game);
 
-    initializeArgs(argc, argv, game);
+    printf("Memoria inizializada");
 
     //Inicializamos los semaforos
 
@@ -44,10 +47,10 @@ int main(int argc, char *argv[])
     return 0;
 }
 
-void initializeArgs(int argc, char *argv[], Game * game) {
-    game->width = WIDTH;
-    game->height = HEIGHT;
-    game->game_over = false;
+void initializeArgs(int argc, char *argv[], Game **game){
+    (*game)->width = WIDTH;
+    (*game)->height = HEIGHT;
+    (*game)->game_over = false;
     seed = SEED;
 
     int opt;
@@ -55,12 +58,12 @@ void initializeArgs(int argc, char *argv[], Game * game) {
     while ((opt = getopt(argc, argv, "w:h:d:t:s:v:p")) != -1) {
         switch (opt) {
             case 'w':
-                game->width = atoi(optarg);
-                if (game->width < 10) exitError("El width debe ser mayor o igual a 10");
+                (*game)->width = atoi(optarg);
+                if ((*game)->width < 10) exitError("El width debe ser mayor o igual a 10");
                 break;
             case 'h':
-                game->height = atoi(optarg);
-                if (game->height < 10) exitError("El height debe ser mayor o igual a 10");
+                (*game)->height = atoi(optarg);
+                if ((*game)->height < 10) exitError("El height debe ser mayor o igual a 10");
                 break;
             case 'd':
                 delay = atoi(optarg);
@@ -81,7 +84,7 @@ void initializeArgs(int argc, char *argv[], Game * game) {
                     players_paths[num_players++] = argv[optind++];
                 }
                 if (num_players == 0) exitError("Debe haber al menos un jugador");
-                game->num_players = num_players;
+                (*game)->num_players = num_players;
                 break;
             default:
                 fprintf(stderr, "Uso: %s [-w width] [-h height] [-d delay] [-t timeout] [-s seed] [-v view] -p player1 [player2...]\n", argv[0]);
@@ -90,9 +93,9 @@ void initializeArgs(int argc, char *argv[], Game * game) {
     }
 
     // El tamaño es el struct + El tamaño del tablero y como estan solapados en el char *, resto su tamaño.
-    unsigned long newSize = sizeof(Game) * game->width * game->height * sizeof(char) - sizeof(char *);
-    munmap(game, sizeof(Game));
-    game = initializeShared("/game_state", newSize);
+    unsigned long newSize = sizeof(Game) * (*game)->width * (*game)->height * sizeof(char) - sizeof(char *);
+    munmap(*game, sizeof(Game));
+    *game = initializeShared("/game_state", newSize);
 }
 
 void exitError(const char * error) {

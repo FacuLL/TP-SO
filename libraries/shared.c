@@ -1,6 +1,7 @@
 #include "shared.h"
 
 void * initializeShared(const char * name, unsigned long size) {
+
     int fd = shm_open(name, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
     
     if (fd == -1) {
@@ -13,7 +14,9 @@ void * initializeShared(const char * name, unsigned long size) {
         return NULL;
     }
 
+    void *ptr = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+
     close(fd);
 
-    return mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+    return ptr;
 }
