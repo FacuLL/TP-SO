@@ -21,7 +21,7 @@
 //   - Si es positivo (1-9): la celda está libre y el valor es su recompensa
 //   - Si es negativo o cero: la celda fue capturada por el jugador con ese índice (-valor)
 static void dibujar_tablero(Game *game, int ancho, int alto) {
-    char *tablero = BOARD_START(game); // viene definido en structs.h junto al struct Game
+    char *tablero = game->board;
 
     for (int fila = 0; fila < alto; fila++) {
         move(fila + 2, 0);  // dejamos 2 filas arriba para el título
@@ -105,9 +105,8 @@ int main(int argc, char *argv[]) {
     int ancho = atoi(argv[1]);
     int alto  = atoi(argv[2]);
 
-    // El tamaño de la memoria compartida del estado es el struct Game
-    // (sin contar el puntero al tablero, que no ocupa espacio real) más las celdas del tablero
-    size_t tam_estado = sizeof(Game) - sizeof(char *) + (size_t)ancho * alto;
+    // sizeof(Game) no incluye el tablero (flexible array member), se suma por separado
+    size_t tam_estado = sizeof(Game) + (size_t)ancho * alto;
 
     // Abrimos la memoria compartida del estado del juego (solo lectura)
     int fd_estado = shm_open(GAME_STATE_SHM, O_RDONLY, 0);

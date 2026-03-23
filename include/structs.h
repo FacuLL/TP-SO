@@ -2,7 +2,6 @@
 #define STRUCTS_H
 
 #include <stdbool.h>
-#include <stddef.h>
 #include <sys/types.h>
 #include <semaphore.h>
 
@@ -22,14 +21,8 @@
         unsigned char num_players; // Cantidad de jugadores
         Player players[9]; // Lista de jugadores
         bool game_over; // Indica si el juego se ha terminado
-        char *board; // Puntero al comienzo del tablero. fila-0, fila-1, ..., fila-n-1
+        char board[]; // Tablero: fila-0, fila-1, ..., fila-n-1 (flexible array member)
     } Game;
-
-// El tablero se almacena en la memoria compartida justo después del campo game_over.
-// No se usa offsetof(Game, board) porque el compilador agrega padding antes del puntero
-// (alineación a 8 bytes en sistemas de 64 bits), lo que correría la lectura 7 bytes.
-// Todos los procesos deben usar este macro para acceder al tablero.
-#define BOARD_START(game) ((char *)(game) + offsetof(Game, game_over) + sizeof(bool))
 
     typedef struct {
         sem_t has_to_print; // El máster le indica a la vista que hay cambios por imprimir
