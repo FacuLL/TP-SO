@@ -17,7 +17,11 @@
 #define COLOR_BASE_JUGADOR 2
 
 // Dibuja el tablero celda por celda.
-// Cada celda contiene un valor entre -8 y 9:
+// Cada celda ocupa ancho fijo de 3 caracteres para no desalinear filas:
+//   - Libre: " 1 " .. " 9 "
+//   - Capturada por rastro: " A " .. " I "
+//   - Cabeza actual del jugador: "[A]" .. "[I]"
+// El tablero contiene valores entre -8 y 9:
 //   - Si es positivo (1-9): la celda está libre y el valor es su recompensa
 //   - Si es negativo o cero: la celda fue capturada por el jugador con ese índice (-valor)
 static void dibujar_tablero(Game *game, int ancho, int alto) {
@@ -31,13 +35,23 @@ static void dibujar_tablero(Game *game, int ancho, int alto) {
             if (celda > 0) {
                 // Celda libre: mostramos su recompensa en blanco
                 attron(COLOR_PAIR(COLOR_CELDA_LIBRE));
-                printw("%d ", celda);
+                printw(" %d ", celda);
                 attroff(COLOR_PAIR(COLOR_CELDA_LIBRE));
             } else {
                 // Celda capturada: mostramos la letra del jugador (A, B, C, ...)
                 int idx_jugador = (int)(-celda);
                 attron(COLOR_PAIR(COLOR_BASE_JUGADOR + idx_jugador) | A_BOLD);
-                printw("%c ", 'A' + idx_jugador);
+                bool es_cabeza = false;
+                if (idx_jugador >= 0 && idx_jugador < game->num_players) {
+                    Player *p = &game->players[idx_jugador];
+                    es_cabeza = (p->x == (unsigned short)col && p->y == (unsigned short)fila);
+                }
+
+                if (es_cabeza) {
+                    printw("[%c]", 'A' + idx_jugador);
+                } else {
+                    printw(" %c ", 'A' + idx_jugador);
+                }
                 attroff(COLOR_PAIR(COLOR_BASE_JUGADOR + idx_jugador) | A_BOLD);
             }
         }
