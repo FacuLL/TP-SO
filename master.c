@@ -42,7 +42,8 @@ int main(int argc, char *argv[])
     //Configuración nesesaria para los pipes
 
     int fd[game->num_players][2];
-    char buffer[100];
+
+
 
     // Inicializamos los players
 
@@ -57,17 +58,24 @@ int main(int argc, char *argv[])
             close(fd[i][1]);
 
             char *args[] = {players_paths[i], NULL};
+            
             execvp(args[0], args);
-
             perror("Un jugador genera un error");
             
             exit(1);
         }
         else{
-
             close(fd[i][1]);
+
             game->players[i].pid = player_pid;
-    
+
+            char buffer[100];
+            int n = read(fd[i][0], buffer, sizeof(buffer));
+            buffer[n] = '\0';
+
+            //printf("Desde el padre: %s \n",buffer);
+
+            wait(NULL);
         }
     }
 
