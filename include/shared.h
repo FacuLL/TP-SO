@@ -8,6 +8,8 @@
     #include <unistd.h>
     #include <sys/types.h>
 
+    #include "structs.h"
+
     void * initializeShared(const char * name, unsigned long size);
 
 #endif

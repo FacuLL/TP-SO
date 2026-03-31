@@ -19,6 +19,8 @@
 
 ### Master
 
+    Se inicializan las memorias compartidas.
+    Se inicializa un pipe por cada hijo. En el cual, el hijo escribe y el padre lee. 
 
 ### Player
 

@@ -24,8 +24,6 @@ int main(int argc, char *argv[])
 
     // Incializamos las memorias compartidas
 
-    printf("Inizialización de memoria \n");
-
     Game * game = initializeShared("/game_state", sizeof(Game));
     if (game == NULL) return 1;
 
@@ -36,26 +34,40 @@ int main(int argc, char *argv[])
     
     initializeArgs(argc, argv, &game);
 
-    printf("Memoria inizializada\n");
-
     //Inicializamos los semaforos
 
     initializeSemaphores(sync, game);
 
-    // Inicializamos los players
 
-    printf("%d\n", game->num_players);
+    //Configuración nesesaria para los pipes
+
+    int fd[game->num_players][2];
+    char buffer[100];
+
+    // Inicializamos los players
 
     for(int i = 0 ; i < game->num_players ; i++){
         int player_pid = fork();
         if(player_pid == 0){
 
-            printf("%s \n", players_paths[i]);
-            char *args[] = {players_paths[i], NULL}; // Argumentos del programa
+            //Se redirige el pipe 
+
+            close(fd[i][0]);
+            dup2(fd[i][1], STDOUT_FILENO);
+            close(fd[i][1]);
+
+            char *args[] = {players_paths[i], NULL};
             execvp(args[0], args);
 
             perror("Un jugador genera un error");
+            
             exit(1);
+        }
+        else{
+
+            close(fd[i][1]);
+            game->players[i].pid = player_pid;
+    
         }
     }
 
@@ -64,6 +76,13 @@ int main(int argc, char *argv[])
     // Incializamos la vista, si hay
 
     // Logica en cada tick
+
+    //Se cierran los pipes
+
+
+    for(int i = 0 ; i < game->num_players; i++){
+        close(fd[i][0]);
+    }
 
     return 0;
 }
