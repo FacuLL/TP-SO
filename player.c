@@ -1,5 +1,9 @@
+#include "shared.h"
+
 int main(int argc, char const *argv[])
 {
-    /* code */
+    
+    printf("Hijo");
+
     return 0;
 }

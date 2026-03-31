@@ -2,10 +2,13 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 #include "defaultValues.h"
 #include "structs.h"
 #include "shared.h"
 #include "semaphores.h"
+
 
 int delay = DELAY;
 int timeout = TIMEOUT;
@@ -28,19 +31,37 @@ int main(int argc, char *argv[])
 
     SyncState * sync = initializeShared("/game_sync", sizeof(SyncState));
     if (sync == NULL) return 1;
+
     //Colocamos los datos iniciales
     
     initializeArgs(argc, argv, &game);
 
-    printf("Memoria inizializada");
+    printf("Memoria inizializada\n");
 
     //Inicializamos los semaforos
 
     initializeSemaphores(sync, game);
 
-    // Incializamos la vista, si hay
-
     // Inicializamos los players
+
+    printf("%d\n", game->num_players);
+
+    for(int i = 0 ; i < game->num_players ; i++){
+        int player_pid = fork();
+        if(player_pid == 0){
+
+            printf("%s \n", players_paths[i]);
+            char *args[] = {players_paths[i], NULL}; // Argumentos del programa
+            execvp(args[0], args);
+
+            perror("Un jugador genera un error");
+            exit(1);
+        }
+    }
+
+    wait(NULL);
+
+    // Incializamos la vista, si hay
 
     // Logica en cada tick
 
@@ -51,7 +72,7 @@ void initializeArgs(int argc, char *argv[], Game **game){
     (*game)->width = WIDTH;
     (*game)->height = HEIGHT;
     (*game)->game_over = false;
-    seed = SEED;
+    seed = SEED;   
 
     int opt;
 
