@@ -43,22 +43,26 @@ int main(int argc, char *argv[])
 
     int fd[game->num_players][2];
 
-
     // Inicializamos los players
 
     for(int i = 0 ; i < game->num_players ; i++){
         
+        //Inicialización de pipes
         if(pipe(fd[i]) == -1) {
             perror("pipe");
             exit(EXIT_FAILURE);
         }
         
+        //Creo nuevo proceso hijo
         int player_pid = fork();
 
         if(player_pid == -1){
             perror("fork");
             exit(EXIT_FAILURE);
         }
+
+        //Proceso hijo
+
         if(player_pid == 0){
 
             //Se redirige el pipe 
@@ -67,15 +71,17 @@ int main(int argc, char *argv[])
             dup2(fd[i][1], STDOUT_FILENO);
             close(fd[i][1]);
 
+            //NO SACAR EL NULL, *args debe terminar en el. Se elimino momentaneamente y causo MUCHOS problemas
             char *args[] = {players_paths[i], NULL};
 
-            execvp(args[0], args);
+            //LLamamos al programa de la dirección correspondiente
 
+            execvp(args[0], args);
             perror("Un jugador genera un error"); 
             exit(1);
         }
         else{
-            
+
             close(fd[i][1]);
 
             game->players[i].pid = player_pid;
@@ -85,7 +91,8 @@ int main(int argc, char *argv[])
             
             buffer[n] = '\0';
             
-            printf("Padre recibió: %s de longitud %d del hijo %d", buffer , n, i);
+            printf("Padre recibió: %s de longitud %d del hijo %d de %d \n", buffer , n, i, game->num_players);
+
         }
     }
 
@@ -99,6 +106,10 @@ int main(int argc, char *argv[])
     for(int i = 0 ; i < game->num_players; i++){
         close(fd[i][0]);
     }
+
+    shm_unlink("/game_state");
+    shm_unlink("/game_sync");
+
 
     return 0;
 }
@@ -136,10 +147,10 @@ void initializeArgs(int argc, char *argv[], Game **game){
             case 'p':
                 int num_players = 0;
                 while (optind < argc && argv[optind][0] != '-') {
-                    if (num_players > 9) exitError("No deben haber más de 9 jugadores");
+                    if (num_players >= MAX_PLAYERS) exitError("No deben haber más de 9 jugadores");
                     players_paths[num_players++] = argv[optind++];
                 }
-                if (num_players == 0) exitError("Debe haber al menos un jugador");
+                if (num_players < MIN_PLAYERS ) exitError("Debe haber al menos un jugador");
                 (*game)->num_players = num_players;
                 break;
             default:
