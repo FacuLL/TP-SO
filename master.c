@@ -44,11 +44,21 @@ int main(int argc, char *argv[])
     int fd[game->num_players][2];
 
 
-
     // Inicializamos los players
 
     for(int i = 0 ; i < game->num_players ; i++){
+        
+        if(pipe(fd[i]) == -1) {
+            perror("pipe");
+            exit(EXIT_FAILURE);
+        }
+        
         int player_pid = fork();
+
+        if(player_pid == -1){
+            perror("fork");
+            exit(EXIT_FAILURE);
+        }
         if(player_pid == 0){
 
             //Se redirige el pipe 
@@ -58,28 +68,26 @@ int main(int argc, char *argv[])
             close(fd[i][1]);
 
             char *args[] = {players_paths[i], NULL};
-            
+
             execvp(args[0], args);
-            perror("Un jugador genera un error");
-            
+
+            perror("Un jugador genera un error"); 
             exit(1);
         }
         else{
+            
             close(fd[i][1]);
 
             game->players[i].pid = player_pid;
 
             char buffer[100];
-            int n = read(fd[i][0], buffer, sizeof(buffer));
+            int n = read(fd[i][0], buffer, sizeof(buffer) - 1);
+            
             buffer[n] = '\0';
-
-            //printf("Desde el padre: %s \n",buffer);
-
-            wait(NULL);
+            
+            printf("Padre recibió: %s de longitud %d del hijo %d", buffer , n, i);
         }
     }
-
-    wait(NULL);
 
     // Incializamos la vista, si hay
 
