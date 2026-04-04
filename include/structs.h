@@ -1,9 +1,10 @@
 #ifndef STRUCTS_H
 #define STRUCTS_H
 
-#include <stdbool.h>
-#include <sys/types.h>
-#include <semaphore.h>
+    #include <stdbool.h>
+    #include <sys/types.h>
+    #include <semaphore.h>
+    #include "defaultValues.h"
 
     typedef struct {
         char name[16]; // Nombre del jugador
@@ -19,7 +20,7 @@
         unsigned short width; // Ancho del tablero
         unsigned short height; // Alto del tablero
         unsigned char num_players; // Cantidad de jugadores
-        Player players[9]; // Lista de jugadores
+        Player players[MAX_PLAYERS]; // Lista de jugadores
         bool game_over; // Indica si el juego se ha terminado
         char board[]; // Puntero al comienzo del tablero. fila-0, fila-1, ..., fila-n-1
     } Game;

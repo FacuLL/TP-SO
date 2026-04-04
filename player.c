@@ -1,50 +1,37 @@
 #include "shared.h"
 #include "semaphores.h"
+#include "utils.h"
 
+Arguments arguments = {
+    .width = WIDTH,
+    .height = HEIGHT
+};
 
-int main(int argc, char const *argv[]){
+int main(int argc, char *argv[]){
 
-
+    initializeArgs(argc, argv, &arguments);
+    
     //Referencio las memorias compartidas
     
-    int fd_game_state = shm_open("/game_state", O_RDONLY, 0666);
-    if (fd_game_state == -1) {
-        perror("shm_open");
-        return -1;
-    }
+    unsigned long gameSize = sizeof(Game) + arguments.width * arguments.height * sizeof(char) - sizeof(char);
+    Game *game = initializeShared("/game_state", gameSize);    
+    if (game == NULL) return 1;
 
-    Game * gameState = (Game *)mmap(NULL, sizeof(Game),  PROT_READ, MAP_SHARED, fd_game_state, 0 );
-    if (sync == MAP_FAILED){
-		perror("mmap");
-		return -1;
-	}
-
-    close(fd_game_state);
-
-    int fd_game_sync = shm_open("/game_sync", O_RDONLY, 0666);
-    if (fd_game_sync == -1) {
-        perror("shm_open");
-        return -1;
-    }
-
-    SyncState * sync = (SyncState *)mmap(NULL, sizeof(SyncState), PROT_READ, MAP_SHARED, fd_game_sync, 0 );
-	if (sync == MAP_FAILED){
-		perror("mmap");
-		return -1;
-	}
-
-    close(fd_game_sync);
+    SyncState * sync = initializeShared("/game_sync", sizeof(SyncState));
+    if (sync == NULL) return 1;
     
     
-    printf("Hijo Dice: %d",gameState->num_players);
+    printf("Hijo Dice: %d",game->num_players);
     fflush(stdout);
 
     
     sem_post(&(sync->has_to_print));
     sem_wait(&(sync->can_player_move[0]));
     
-    munmap(gameState, sizeof(Game));
+    munmap(game, sizeof(Game));
     munmap(sync, sizeof(SyncState));
+    shm_unlink("/game_state");
+    shm_unlink("/game_sync");
 
     return 0;
 }

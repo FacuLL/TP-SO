@@ -1,7 +1,3 @@
-#include <getopt.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <unistd.h>
 #include <signal.h>
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -12,71 +8,51 @@
 #include "utils.h"
 
 Arguments arguments = {
-    width = WIDTH;
-    height = HEIGHT;
-    delay = DELAY; 
-    timeout = TIMEOUT;
-    seed = SEED;
-    view_path = NULL;
-    num_players = 0;
-    players_paths[9];
+    .width = WIDTH,
+    .height = HEIGHT,
+    .delay = DELAY, 
+    .timeout = TIMEOUT,
+    .view_path = VIEW,
+    .num_players = 0,
+    .players_paths = {NULL}
 }; 
 
-void initializeArgs(int argc, char *argv[], Game **game);
-void exitError(const char * error);
+void initializeGame(Game * game, Arguments * arguments);
 
 int main(int argc, char *argv[])
 {
-    
     initializeArgs(argc, argv, &arguments);
-    // Incializamos las memorias compartidas
-
-    Game *game = initializeShared("/game_state", sizeof(Game));    
+    
+    unsigned long gameSize = sizeof(Game) + arguments.width * arguments.height * sizeof(char) - sizeof(char);
+    Game *game = initializeShared("/game_state", gameSize);    
     if (game == NULL) return 1;
+    initializeGame(game, &arguments);
 
     SyncState * sync = initializeShared("/game_sync", sizeof(SyncState));
     if (sync == NULL) return 1;
-    
-
-    // El tamaño es el struct + El tamaño del tablero y como estan solapados en el char *, resto su tamaño.
-    unsigned long newSize = sizeof(Game) + game->width * game->height * sizeof(char) - sizeof(char) ;
-    
-    munmap(game, sizeof(Game));
-    shm_unlink("/game_state");
-    
-    game = initializeShared("/game_state", newSize);
-    
 
     char * width = intToStr(game->width);
     char * height = intToStr(game->height);
 
     //Inicializamos los semaforos
-
     initializeSemaphores(sync, game);
-
-
     
     //Inicializamos la vista 
-
-
-
-    if (view_path != NULL) {
+    int view_pid;
+    if (arguments.view_path != NULL) {
         if ((view_pid = fork()) == 0) {
             char * argsv[3] = { width, height, NULL };
             char * argse[1] = { NULL };
-            execve(view_path, argsv, argse);
+            execve(arguments.view_path, argsv, argse);
         }
     }
 
     //Configuración nesesaria para los pipes
-
     int fd[game->num_players][2];
 
     printf("num players: %d \n",  game->num_players );
 
     for(int i = 0 ; i < game->num_players ; i++){
-        
-        
         //Inicialización de pipes
         if(pipe(fd[i]) == -1) {
             perror("pipe");
@@ -102,7 +78,7 @@ int main(int argc, char *argv[])
             close(fd[i][1]);
 
             //NO SACAR EL NULL, *args debe terminar en el. Se elimino momentaneamente y causo MUCHOS problemas
-            char *args[] = {players_paths[i], NULL};
+            char *args[] = {arguments.players_paths[i], NULL};
 
             //LLamamos al programa de la dirección correspondiente
 
@@ -123,19 +99,19 @@ int main(int argc, char *argv[])
     // Logica en cada tick
     
     // Limpieza
-    if(view_path != NULL) kill(view_pid, SIGKILL);
+    if(arguments.view_path != NULL) kill(view_pid, SIGKILL);
 
     for (int i = 0; i < game->num_players; i++) {
         kill(game->players[i].pid, SIGKILL);
     }
 
-    printf("flag Salida \n");
-
     free(width);
     free(height);
     
-    munmap(game, newSize);
+    munmap(game, gameSize);
     munmap(sync, sizeof(SyncState));
+    shm_unlink("/game_state");
+    shm_unlink("/game_sync");
 
 
     //Se cierran los pipes
@@ -145,8 +121,6 @@ int main(int argc, char *argv[])
         close(fd[i][0]);
     }
 
-    shm_unlink("/game_state");
-    shm_unlink("/game_sync");
 
     
 
@@ -155,50 +129,25 @@ int main(int argc, char *argv[])
     return 0;
 }
 
-void inirializeGame()
+void initializeGame(Game * game, Arguments * arguments) {
+    // Inicializar data del juego
+    *game = (Game) {
+        .width = arguments->width,
+        .height = arguments->height,
+        .num_players = arguments->num_players,
+        .game_over = false,
+    };
 
-void initializeArgs(int argc, char *argv[], Arguments **game){
-    (*game)->width = WIDTH;
-    (*game)->height = HEIGHT;
-    (*game)->game_over = false;
-    seed = SEED;   
-
-    int opt;
-
-    while ((opt = getopt(argc, argv, "w:h:d:t:s:v:p")) != -1) {
-        switch (opt) {
-            case 'w':
-                (*game)->width = atoi(optarg);
-                if ((*game)->width < 10) exitError("El width debe ser mayor o igual a 10");
-                break;
-            case 'h':
-                (*game)->height = atoi(optarg);
-                if ((*game)->height < 10) exitError("El height debe ser mayor o igual a 10");
-                break;
-            case 'd':
-                delay = atoi(optarg);
-                break;
-            case 't':
-                timeout = atoi(optarg);
-                break;
-            case 's':
-                seed = (unsigned int)atoi(optarg);
-                break;
-            case 'v':
-                view_path = optarg;
-                break;
-            case 'p':
-                int num_players = 0;
-                while (optind < argc && argv[optind][0] != '-') {
-                    if (num_players >= MAX_PLAYERS) exitError("No deben haber más de 9 jugadores");
-                    players_paths[num_players++] = argv[optind++];
-                }
-                if (num_players < MIN_PLAYERS ) exitError("Debe haber al menos un jugador");
-                (*game)->num_players = num_players;
-                break;
-            default:
-                fprintf(stderr, "Uso: %s [-w width] [-h height] [-d delay] [-t timeout] [-s seed] [-v view] -p player1 [player2...]\n", argv[0]);
-                exit(1);
-        }
+    // Inicializar data de players
+    for (int i = 0; i < game->num_players; i++) {
+        game->players[i] = (Player) {
+            .name = "Player",
+            .score = 0,
+            .invalid_moves = 0,
+            .valid_moves = 0,
+        };
     }
+    
+    // Inicializar board
+
 }
