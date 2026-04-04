@@ -3,11 +3,14 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <signal.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 #include "defaultValues.h"
 #include "structs.h"
 #include "shared.h"
 #include "semaphores.h"
 #include "utils.h"
+
 
 int delay = DELAY;
 int timeout = TIMEOUT;
@@ -21,6 +24,8 @@ void exitError(const char * error);
 
 int main(int argc, char *argv[])
 {
+
+    // Incializamos las memorias compartidas
 
     Game * game = initializeShared("/game_state", sizeof(Game));
     if (game == NULL) return 1;
@@ -38,9 +43,13 @@ int main(int argc, char *argv[])
     char * width = intToStr(game->width);
     char * height = intToStr(game->height);
 
+    //Inicializamos los semaforos
+
     initializeSemaphores(sync, game);
 
-    // Incializamos la vista, si hay
+
+    
+    //Inicializamos la vista 
 
     if (view_path != NULL) {
         if ((view_pid = fork()) == 0) {
@@ -50,23 +59,65 @@ int main(int argc, char *argv[])
         }
     }
 
-    // Inicializamos los players
+    //Configuración nesesaria para los pipes
 
-    for (int i = 0; i < game->num_players; i++) {
-        pid_t pid = fork();
-        if (pid == 0) {
-            char * argsv[3] = { width, height, NULL };
-            char * argse[1] = { NULL };
-            execve(players_paths[i], argsv, argse);
-        } else {
-            game->players[i].pid = pid;
+    int fd[game->num_players][2];
+
+
+    for(int i = 0 ; i < game->num_players ; i++){
+        
+        //Inicialización de pipes
+        if(pipe(fd[i]) == -1) {
+            perror("pipe");
+            exit(EXIT_FAILURE);
+        }
+        
+        //Creo nuevo proceso hijo
+        int player_pid = fork();
+
+        if(player_pid == -1){
+            perror("fork");
+            exit(EXIT_FAILURE);
+        }
+
+        //Proceso hijo
+
+        if(player_pid == 0){
+
+            //Se redirige el pipe 
+
+            close(fd[i][0]);
+            dup2(fd[i][1], STDOUT_FILENO);
+            close(fd[i][1]);
+
+            //NO SACAR EL NULL, *args debe terminar en el. Se elimino momentaneamente y causo MUCHOS problemas
+            char *args[] = {players_paths[i], NULL};
+
+            //LLamamos al programa de la dirección correspondiente
+
+            execvp(args[0], args);
+            perror("Un jugador genera un error"); 
+            exit(1);
+        }
+        else{
+
+            close(fd[i][1]);
+
+            game->players[i].pid = player_pid;
+
+            char buffer[100];
+            int n = read(fd[i][0], buffer, sizeof(buffer) - 1);
+            
+            buffer[n] = '\0';
+            
+            printf("Padre recibió: %s de longitud %d del hijo %d de %d \n", buffer , n, i, game->num_players);
+
         }
     }
-    
+
     // Logica en cada tick
 
-
-
+    
     // Limpieza
 
     kill(view_pid, SIGKILL);
@@ -80,14 +131,26 @@ int main(int argc, char *argv[])
     munmap(game, newSize);
     munmap(sync, sizeof(SyncState));
 
+
+    //Se cierran los pipes
+
+
+    for(int i = 0 ; i < game->num_players; i++){
+        close(fd[i][0]);
+    }
+
+    shm_unlink("/game_state");
+    shm_unlink("/game_sync");
+
+
     return 0;
 }
 
-void initializeArgs(int argc, char *argv[], Game *game){
-    game->width = WIDTH;
-    game->height = HEIGHT;
-    game->game_over = false;
-    seed = SEED;
+void initializeArgs(int argc, char *argv[], Game **game){
+    (*game)->width = WIDTH;
+    (*game)->height = HEIGHT;
+    (*game)->game_over = false;
+    seed = SEED;   
 
     int opt;
 
@@ -116,11 +179,11 @@ void initializeArgs(int argc, char *argv[], Game *game){
             case 'p':
                 int num_players = 0;
                 while (optind < argc && argv[optind][0] != '-') {
-                    if (num_players > 9) exitError("No deben haber más de 9 jugadores");
+                    if (num_players >= MAX_PLAYERS) exitError("No deben haber más de 9 jugadores");
                     players_paths[num_players++] = argv[optind++];
                 }
-                if (num_players == 0) exitError("Debe haber al menos un jugador");
-                game->num_players = num_players;
+                if (num_players < MIN_PLAYERS ) exitError("Debe haber al menos un jugador");
+                (*game)->num_players = num_players;
                 break;
             default:
                 fprintf(stderr, "Uso: %s [-w width] [-h height] [-d delay] [-t timeout] [-s seed] [-v view] -p player1 [player2...]\n", argv[0]);

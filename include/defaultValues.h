@@ -10,5 +10,8 @@
     #define VIEW NULL
     #define MIN_PLAYERS 1
     #define MAX_PLAYERS 9
+    #define SEMAPHORE_EXIT_FAILURE -1
+    #define NOT_SHARED_MEMORY 0
+    #define SHARED_MEMORY 1
 
 #endif
