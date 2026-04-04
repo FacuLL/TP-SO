@@ -21,7 +21,7 @@ void initializeSemaphores(SyncState * state, Game * game){
         perror("sem_init failed");
         exit(SEMAPHORE_EXIT_FAILURE);
     }
-    if (sem_init(&(state->next_variable_mutex), SHARED_MEMORY, 1) == -1) {
+    if (sem_init(&(state->readers_count_mutex), SHARED_MEMORY, 1) == -1) {
         perror("sem_init failed");
         exit(SEMAPHORE_EXIT_FAILURE);
     }
