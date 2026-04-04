@@ -15,12 +15,12 @@ int randInt(int min, int max) {
     return (rand() % (max - min + 1)) + min;
 }
 
-void initializeArgs(int argc, char *argv[], Arguments * arguments) {
+void initializeArgs(int argc, char *argv[], Arguments * arguments, char * argsRequired) {
     arguments->seed = SEED;
 
     int opt;
 
-    while ((opt = getopt(argc, argv, "w:h:d:t:s:v:p")) != -1) {
+    while ((opt = getopt(argc, argv, argsRequired)) != -1) {
         switch (opt) {
             case 'w':
                 arguments->width = atoi(optarg);
@@ -45,15 +45,22 @@ void initializeArgs(int argc, char *argv[], Arguments * arguments) {
             case 'p':
                 int num_players = 0;
                 while (optind < argc && argv[optind][0] != '-') {
-                    if (num_players >= MAX_PLAYERS) exitError("No deben haber más de 9 jugadores");
+                    if (num_players >= MAX_PLAYERS) {
+                        exitError("No deben haber más de 9 jugadores\n");
+                    }
                     arguments->players_paths[num_players++] = argv[optind++];
                 }
-                if (num_players < MIN_PLAYERS ) exitError("Debe haber al menos un jugador");
-                arguments->num_players = num_players;
+                if (num_players < MIN_PLAYERS) {
+                    exitError("Debe haber al menos un jugador después de -p\n");
+                }
+                arguments->num_players = (unsigned char)num_players;
                 break;
             default:
                 fprintf(stderr, "Uso: %s [-w width] [-h height] [-d delay] [-t timeout] [-s seed] [-v view] -p player1 [player2...]\n", argv[0]);
                 exit(1);
         }
+    }
+    if (arguments->num_players < 1) {
+        exitError("Error: No se han definido jugadores. Usa el flag -p seguido de las rutas.\n");
     }
 }

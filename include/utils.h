@@ -13,6 +13,6 @@
     void exitError(const char * error);
     char * intToStr(int num);
     int randInt(int min, int max);
-    void initializeArgs(int argc, char *argv[], Arguments * arguments);
+    void initializeArgs(int argc, char *argv[], Arguments * arguments, char * argsRequired);
 
 #endif

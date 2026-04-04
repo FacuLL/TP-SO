@@ -115,13 +115,13 @@ Arguments arguments = {
 
 int main(int argc, char *argv[]) {
 
-    initializeArgs(argc, argv, &arguments);
+    initializeArgs(argc, argv, &arguments, "w:h");
     
     unsigned long gameSize = sizeof(Game) + arguments.width * arguments.height * sizeof(char) - sizeof(char);
-    Game *game = initializeShared(SHARED_GAME, gameSize);    
+    Game *game = attachShared(SHARED_GAME, gameSize);    
     if (game == NULL) return 1;
 
-    SyncState * sync = initializeShared(SHARED_SYNC, sizeof(SyncState));
+    SyncState * sync = attachShared(SHARED_SYNC, sizeof(SyncState));
     if (sync == NULL) return 1;
 
     // Abrimos el terminal directamente con /dev/tty.

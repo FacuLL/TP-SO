@@ -22,7 +22,7 @@ void initializeGame(Game * game, Arguments * arguments);
 
 int main(int argc, char *argv[])
 {
-    initializeArgs(argc, argv, &arguments);
+    initializeArgs(argc, argv, &arguments, "+w:h:d:t:s:v:p:");
 
     srand(arguments.seed);
     

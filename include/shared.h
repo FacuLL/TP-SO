@@ -15,5 +15,6 @@
     #define SHARED_SYNC "/game_sync"
 
     void * initializeShared(const char * name, unsigned long size);
+    void * attachShared(const char * name, unsigned long size);
 
 #endif
