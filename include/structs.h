@@ -29,7 +29,7 @@
         sem_t view_finished; // La vista le indica al máster que terminó de imprimir
         sem_t master_mutex; // Mutex para evitar inanición del máster al acceder al estado
         sem_t game_state_mutex; // Mutex para el estado del juego
-        sem_t next_variable_mutex; // Mutex para la siguiente variable
+        sem_t readers_count_mutex; // Mutex para la siguiente variable
         unsigned int readers_count; // Cantidad de jugadores leyendo el estado
         sem_t can_player_move[9]; // Le indican a cada jugador que puede enviar 1 movimiento
     } SyncState;
