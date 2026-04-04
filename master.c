@@ -19,7 +19,7 @@ char * view_path = VIEW;
 pid_t view_pid;
 char * players_paths[9] = {};
 
-void initializeArgs(int argc, char *argv[], Game *game);
+void initializeArgs(int argc, char *argv[], Game **game);
 void exitError(const char * error);
 
 int main(int argc, char *argv[])
@@ -157,12 +157,12 @@ void initializeArgs(int argc, char *argv[], Game **game){
     while ((opt = getopt(argc, argv, "w:h:d:t:s:v:p")) != -1) {
         switch (opt) {
             case 'w':
-                game->width = atoi(optarg);
-                if (game->width < 10) exitError("El width debe ser mayor o igual a 10");
+                (*game)->width = atoi(optarg);
+                if ((*game)->width < 10) exitError("El width debe ser mayor o igual a 10");
                 break;
             case 'h':
-                game->height = atoi(optarg);
-                if (game->height < 10) exitError("El height debe ser mayor o igual a 10");
+                (*game)->height = atoi(optarg);
+                if ((*game)->height < 10) exitError("El height debe ser mayor o igual a 10");
                 break;
             case 'd':
                 delay = atoi(optarg);
