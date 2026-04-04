@@ -21,7 +21,7 @@
         unsigned char num_players; // Cantidad de jugadores
         Player players[9]; // Lista de jugadores
         bool game_over; // Indica si el juego se ha terminado
-        char *board; // Puntero al comienzo del tablero. fila-0, fila-1, ..., fila-n-1
+        char board[]; // Puntero al comienzo del tablero. fila-0, fila-1, ..., fila-n-1
     } Game;
 
     typedef struct {
