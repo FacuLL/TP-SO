@@ -1,6 +1,7 @@
 #include <signal.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <math.h>
 #include "defaultValues.h"
 #include "structs.h"
 #include "shared.h"
@@ -22,13 +23,16 @@ void initializeGame(Game * game, Arguments * arguments);
 int main(int argc, char *argv[])
 {
     initializeArgs(argc, argv, &arguments);
+
+    srand(arguments.seed);
     
     unsigned long gameSize = sizeof(Game) + arguments.width * arguments.height * sizeof(char) - sizeof(char);
-    Game *game = initializeShared("/game_state", gameSize);    
+    Game *game = initializeShared(SHARED_GAME, gameSize);    
     if (game == NULL) return 1;
     initializeGame(game, &arguments);
+    char (*board)[game->width] = (char (*)[game->width])game->board;
 
-    SyncState * sync = initializeShared("/game_sync", sizeof(SyncState));
+    SyncState * sync = initializeShared(SHARED_SYNC, sizeof(SyncState));
     if (sync == NULL) return 1;
 
     char * width = intToStr(game->width);
@@ -87,11 +91,9 @@ int main(int argc, char *argv[])
             exit(1);
         }
         else{
-
             close(fd[i][1]);
 
             game->players[i].pid = player_pid;
-            
         }
 
     }
@@ -110,19 +112,13 @@ int main(int argc, char *argv[])
     
     munmap(game, gameSize);
     munmap(sync, sizeof(SyncState));
-    shm_unlink("/game_state");
-    shm_unlink("/game_sync");
-
+    shm_unlink(SHARED_GAME);
+    shm_unlink(SHARED_SYNC);
 
     //Se cierran los pipes
-
-
     for(int i = 0 ; i < game->num_players; i++){
         close(fd[i][0]);
-    }
-
-
-    
+    }    
 
     printf("Terminado");
 
@@ -138,6 +134,20 @@ void initializeGame(Game * game, Arguments * arguments) {
         .game_over = false,
     };
 
+    // Limpieza board
+    char (*board)[game->width] = (char (*)[game->width])game->board;
+    for (int i = 0; i < game->width; i++) {
+        for (int j = 0; j < game->height; j++) {
+            board[i][j] = 0;
+        }
+    }
+
+    double centerX = game->width / 2.0;
+    double centerY = game->height / 2.0;
+    
+    double radiusX = (game->width / 2.0) * 0.8;
+    double radiusY = (game->height / 2.0) * 0.8;
+
     // Inicializar data de players
     for (int i = 0; i < game->num_players; i++) {
         game->players[i] = (Player) {
@@ -146,8 +156,31 @@ void initializeGame(Game * game, Arguments * arguments) {
             .invalid_moves = 0,
             .valid_moves = 0,
         };
+
+        // Definir posicion con simetria central
+        double angle = (2.0 * PI / game->num_players) * i - (PI / 2.0);
+        int x = (int)(centerX + radiusX * cos(angle));
+        int y = (int)(centerY + radiusY * sin(angle));
+        
+        // Corrección por si el redondeo los saca del tablero (índices 0 a W-1)
+        if (x >= game->width) x = game->width - 1;
+        if (y >= game->height) y = game->height - 1;
+        if (x < 0) x = 0;
+        if (y < 0) y = 0;
+
+        game->players[i].x = x;
+        game->players[i].y = y;
+
+        // Actualizar board con la posicion del jugador
+        board[x][y] = i + '0';
     }
     
-    // Inicializar board
-
+    // Inicializar board con valores
+    for (int i = 0; i < game->width; i++) {
+        for (int j = 0; j < game->height; j++) {
+            if (board[i][j] == 0) {
+                board[i][j] = randInt(1, 9);
+            }
+        }
+    }
 }

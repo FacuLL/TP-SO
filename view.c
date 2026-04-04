@@ -5,11 +5,9 @@
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <ncurses.h>
-#include "include/structs.h"
-
-// Nombres de las memorias compartidas, definidos por el máster
-#define GAME_STATE_SHM "/game_state"
-#define GAME_SYNC_SHM  "/game_sync"
+#include "structs.h"
+#include "shared.h"
+#include "utils.h"
 
 // IDs de los pares de colores para ncurses
 // Las celdas libres usan el par 1; cada jugador usa el par 2+índice
@@ -110,40 +108,21 @@ static void mostrar_estado(Game *game, int ancho, int alto) {
     refresh();  // volcamos el buffer a la pantalla
 }
 
+Arguments arguments = {
+    .width = WIDTH,
+    .height = HEIGHT
+};
+
 int main(int argc, char *argv[]) {
-    if (argc < 3) {
-        fprintf(stderr, "Uso: %s <ancho> <alto>\n", argv[0]);
-        return 1;
-    }
 
-    int ancho = atoi(argv[1]);
-    int alto  = atoi(argv[2]);
+    initializeArgs(argc, argv, &arguments);
+    
+    unsigned long gameSize = sizeof(Game) + arguments.width * arguments.height * sizeof(char) - sizeof(char);
+    Game *game = initializeShared(SHARED_GAME, gameSize);    
+    if (game == NULL) return 1;
 
-    // sizeof(Game) no incluye el tablero (flexible array member), se suma por separado
-    size_t tam_estado = sizeof(Game) + (size_t)ancho * alto;
-
-    // Abrimos la memoria compartida del estado del juego (solo lectura)
-    int fd_estado = shm_open(GAME_STATE_SHM, O_RDONLY, 0);
-    if (fd_estado == -1) { perror("shm_open estado"); return 1; }
-    Game *game = mmap(NULL, tam_estado, PROT_READ, MAP_SHARED, fd_estado, 0);
-    close(fd_estado);
-    if (game == MAP_FAILED) { perror("mmap estado"); return 1; }
-
-    // Abrimos la memoria compartida de sincronización (lectura y escritura para los semáforos)
-    int fd_sync = shm_open(GAME_SYNC_SHM, O_RDWR, 0);
-    if (fd_sync == -1) {
-        perror("shm_open sincronizacion");
-        munmap(game, tam_estado);
-        return 1;
-    }
-    SyncState *sync = mmap(NULL, sizeof(SyncState), PROT_READ | PROT_WRITE,
-                           MAP_SHARED, fd_sync, 0);
-    close(fd_sync);
-    if (sync == MAP_FAILED) {
-        perror("mmap sincronizacion");
-        munmap(game, tam_estado);
-        return 1;
-    }
+    SyncState * sync = initializeShared(SHARED_SYNC, sizeof(SyncState));
+    if (sync == NULL) return 1;
 
     // Abrimos el terminal directamente con /dev/tty.
     // El máster puede haber redirigido stdin/stdout para comunicarse con los jugadores,
@@ -179,7 +158,7 @@ int main(int argc, char *argv[]) {
     while (1) {
         sem_wait(&sync->has_to_print);   // esperamos señal del máster
         bool termino = game->game_over;
-        mostrar_estado(game, ancho, alto);
+        mostrar_estado(game, arguments.width, arguments.height);
         sem_post(&sync->view_finished);  // avisamos que terminamos de imprimir
         if (termino) break;
     }
@@ -189,7 +168,9 @@ int main(int argc, char *argv[]) {
     delscreen(pantalla);
     fclose(tty);
 
-    munmap(game, tam_estado);
+    munmap(game, gameSize);
     munmap(sync, sizeof(SyncState));
+    shm_unlink(SHARED_GAME);
+    shm_unlink(SHARED_SYNC);
     return 0;
 }

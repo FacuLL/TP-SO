@@ -11,6 +11,10 @@ char * intToStr(int num) {
     return str;
 }
 
+int randInt(int min, int max) {
+    return (rand() % (max - min + 1)) + min;
+}
+
 void initializeArgs(int argc, char *argv[], Arguments * arguments) {
     arguments->seed = SEED;
 

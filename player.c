@@ -14,10 +14,10 @@ int main(int argc, char *argv[]){
     //Referencio las memorias compartidas
     
     unsigned long gameSize = sizeof(Game) + arguments.width * arguments.height * sizeof(char) - sizeof(char);
-    Game *game = initializeShared("/game_state", gameSize);    
+    Game *game = initializeShared(SHARED_GAME, gameSize);    
     if (game == NULL) return 1;
 
-    SyncState * sync = initializeShared("/game_sync", sizeof(SyncState));
+    SyncState * sync = initializeShared(SHARED_SYNC, sizeof(SyncState));
     if (sync == NULL) return 1;
     
     
@@ -28,10 +28,10 @@ int main(int argc, char *argv[]){
     sem_post(&(sync->has_to_print));
     sem_wait(&(sync->can_player_move[0]));
     
-    munmap(game, sizeof(Game));
+    munmap(game, gameSize);
     munmap(sync, sizeof(SyncState));
-    shm_unlink("/game_state");
-    shm_unlink("/game_sync");
+    shm_unlink(SHARED_GAME);
+    shm_unlink(SHARED_SYNC);
 
     return 0;
 }

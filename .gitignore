@@ -2,6 +2,7 @@
 *.out
 *.exe
 master
+master_catedra
 player
 view
 .*
