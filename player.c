@@ -2,18 +2,18 @@
 #include "semaphores.h"
 #include "utils.h"
 
-Arguments arguments = {
-    .width = WIDTH,
-    .height = HEIGHT
-};
-
 int main(int argc, char *argv[]){
 
-    initializeArgs(argc, argv, &arguments, "w:h");
+    if (argc != 3) {
+        exitError("Uso: ./view [width] [height]");
+    } 
+
+    int width = atoi(argv[1]);
+    int height = atoi(argv[2]);
     
     //Referencio las memorias compartidas
     
-    unsigned long gameSize = sizeof(Game) + arguments.width * arguments.height * sizeof(char) - sizeof(char);
+    unsigned long gameSize = sizeof(Game) + width * height * sizeof(char) - sizeof(char);
     Game *game = attachShared(SHARED_GAME, gameSize);    
     if (game == NULL) return 1;
 

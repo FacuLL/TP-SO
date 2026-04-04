@@ -42,25 +42,45 @@ void initializeArgs(int argc, char *argv[], Arguments * arguments, char * argsRe
             case 'v':
                 arguments->view_path = optarg;
                 break;
-            case 'p':
+            case 'p': {
                 int num_players = 0;
-                while (optind < argc && argv[optind][0] != '-') {
-                    if (num_players >= MAX_PLAYERS) {
+
+                if (optarg != NULL && optarg[0] != '-') {
+                    if (num_players >= MAX_PLAYERS)
                         exitError("No deben haber más de 9 jugadores\n");
-                    }
+                    arguments->players_paths[num_players++] = optarg;
+                }
+
+                // Collect any additional players that follow
+                while (optind < argc && argv[optind][0] != '-') {
+                    if (num_players >= MAX_PLAYERS)
+                        exitError("No deben haber más de 9 jugadores\n");
                     arguments->players_paths[num_players++] = argv[optind++];
                 }
-                if (num_players < MIN_PLAYERS) {
+
+                if (num_players < MIN_PLAYERS)
                     exitError("Debe haber al menos un jugador después de -p\n");
-                }
+
                 arguments->num_players = (unsigned char)num_players;
                 break;
-            default:
+            } default:
                 fprintf(stderr, "Uso: %s [-w width] [-h height] [-d delay] [-t timeout] [-s seed] [-v view] -p player1 [player2...]\n", argv[0]);
                 exit(1);
         }
     }
-    if (arguments->num_players < 1) {
-        exitError("Error: No se han definido jugadores. Usa el flag -p seguido de las rutas.\n");
+}
+
+bool isPlayerBlocked(Game * game, int player_id) {
+    char (*board)[game->width] = (char (*)[game->width])game->board;
+    for (int i = -1; i < 1; i++) {
+        for (int j = -1; j < 1; j++) {
+            if (i != 0 || j != 0) {
+                int x = game->players[player_id].x;
+                int y = game->players[player_id].y;
+                int value = board[x+i][y+j];
+                if (value > 0 && value < 10) return false;
+            }
+        }
     }
+    return true;
 }

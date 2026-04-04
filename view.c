@@ -108,16 +108,15 @@ static void mostrar_estado(Game *game, int ancho, int alto) {
     refresh();  // volcamos el buffer a la pantalla
 }
 
-Arguments arguments = {
-    .width = WIDTH,
-    .height = HEIGHT
-};
-
 int main(int argc, char *argv[]) {
+    if (argc != 3) {
+        exitError("Uso: ./view [width] [height]");
+    } 
 
-    initializeArgs(argc, argv, &arguments, "w:h");
+    int width = atoi(argv[1]);
+    int height = atoi(argv[2]);
     
-    unsigned long gameSize = sizeof(Game) + arguments.width * arguments.height * sizeof(char) - sizeof(char);
+    unsigned long gameSize = sizeof(Game) + (width * height - 1) * sizeof(char);
     Game *game = attachShared(SHARED_GAME, gameSize);    
     if (game == NULL) return 1;
 
@@ -158,7 +157,7 @@ int main(int argc, char *argv[]) {
     while (1) {
         sem_wait(&sync->has_to_print);   // esperamos señal del máster
         bool termino = game->game_over;
-        mostrar_estado(game, arguments.width, arguments.height);
+        mostrar_estado(game, width, height);
         sem_post(&sync->view_finished);  // avisamos que terminamos de imprimir
         if (termino) break;
     }

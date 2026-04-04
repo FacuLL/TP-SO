@@ -6,6 +6,7 @@
     #include <math.h>
     #include <getopt.h>
     #include <unistd.h>
+    #include <string.h>
     #include "structs.h"
 
     #define PI 3.14159
@@ -14,5 +15,6 @@
     char * intToStr(int num);
     int randInt(int min, int max);
     void initializeArgs(int argc, char *argv[], Arguments * arguments, char * argsRequired);
+    bool isPlayerBlocked(Game * game, int player_id);
 
 #endif

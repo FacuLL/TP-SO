@@ -28,14 +28,14 @@ void * initializeShared(const char * name, unsigned long size) {
 }
 
 void * attachShared(const char * name, unsigned long size) {
-    int fd = shm_open(name, O_RDWR, S_IRUSR | S_IWUSR);
+    int fd = shm_open(name, O_RDONLY, S_IRUSR | S_IWUSR);
     
     if (fd == -1) {
         fprintf(stderr, "Error al conectarse al shared memory %s\n", name);
         return NULL;
     }
 
-    void *ptr = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+    void *ptr = mmap(NULL, size, PROT_READ, MAP_SHARED, fd, 0);
 
     if (ptr == MAP_FAILED) {
         perror("Error al mapear el shared memory");

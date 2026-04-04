@@ -8,6 +8,10 @@
 #include "semaphores.h"
 #include "utils.h"
 
+#define FOR_EACH_PLAYER(game, idx) for (int idx = 0; idx < (game)->num_players; idx++)
+
+int movements[8][2] = {{0, 0}};
+
 Arguments arguments = {
     .width = WIDTH,
     .height = HEIGHT,
@@ -22,7 +26,10 @@ void initializeGame(Game * game, Arguments * arguments);
 
 int main(int argc, char *argv[])
 {
-    initializeArgs(argc, argv, &arguments, "+w:h:d:t:s:v:p:");
+    initializeArgs(argc, argv, &arguments, "+w:h:d:t:s:v:p");
+    if (arguments.num_players < 1) {
+        exitError("Debe seleccionarse al menos 1 jugador con -p\n");
+    }
 
     srand(arguments.seed);
     
@@ -45,17 +52,13 @@ int main(int argc, char *argv[])
     int view_pid;
     if (arguments.view_path != NULL) {
         if ((view_pid = fork()) == 0) {
-            char * argsv[3] = { width, height, NULL };
-            char * argse[1] = { NULL };
-            execve(arguments.view_path, argsv, argse);
+            char * argsv[] = { arguments.view_path, width, height, NULL };
+            execvp(arguments.view_path, argsv);
         }
     }
 
     //Configuración nesesaria para los pipes
     int fd[game->num_players][2];
-
-    printf("num players: %d \n",  game->num_players );
-
     for(int i = 0 ; i < game->num_players ; i++){
         //Inicialización de pipes
         if(pipe(fd[i]) == -1) {
@@ -69,41 +72,43 @@ int main(int argc, char *argv[])
         if(player_pid == -1){
             perror("fork");
             exit(EXIT_FAILURE);
-        }
-
-        //Proceso hijo
-
-        if(player_pid == 0){
-
+        } else if (player_pid == 0){
             //Se redirige el pipe 
-
             close(fd[i][0]);
             dup2(fd[i][1], STDOUT_FILENO);
             close(fd[i][1]);
 
             //NO SACAR EL NULL, *args debe terminar en el. Se elimino momentaneamente y causo MUCHOS problemas
-            char *args[] = {arguments.players_paths[i], NULL};
+            char *args[] = {arguments.players_paths[i], width, height, NULL};
 
             //LLamamos al programa de la dirección correspondiente
-
             execvp(args[0], args);
             perror("Un jugador genera un error"); 
             exit(1);
-        }
-        else{
+        } else{
             close(fd[i][1]);
-
             game->players[i].pid = player_pid;
         }
-
     }
 
     // Logica en cada tick
+    while (!game->game_over) {
+
+
+        // Checkea si ya debe terminar el juego
+        bool all_blocked = true;
+        FOR_EACH_PLAYER(game, i) {
+            game->players[i].blocked = isPlayerBlocked(game, i);
+            if (!game->players[i].blocked) all_blocked = false;
+        }
+        if (all_blocked) game->game_over = true;
+    }
     
     // Limpieza
     if(arguments.view_path != NULL) kill(view_pid, SIGKILL);
 
-    for (int i = 0; i < game->num_players; i++) {
+    FOR_EACH_PLAYER(game, i) {
+        close(fd[i][0]);
         kill(game->players[i].pid, SIGKILL);
     }
 
@@ -114,11 +119,6 @@ int main(int argc, char *argv[])
     munmap(sync, sizeof(SyncState));
     shm_unlink(SHARED_GAME);
     shm_unlink(SHARED_SYNC);
-
-    //Se cierran los pipes
-    for(int i = 0 ; i < game->num_players; i++){
-        close(fd[i][0]);
-    }    
 
     printf("Terminado");
 
