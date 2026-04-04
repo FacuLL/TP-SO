@@ -1,13 +1,16 @@
+CC     = gcc
+CFLAGS = -Wall -Iinclude 
+
 all: master player view
 
-master:
-	gcc ./master.c ./libraries/*.c -Iinclude -o master
+master: master.c libraries/*
+	$(CC) $(CFLAGS) master.c libraries/*.c -o master -lrt -lpthread -lm
 
-player:
-	gcc ./player.c ./libraries/*.c -Iinclude -o player
+player: player.c libraries/*
+	$(CC) $(CFLAGS) player.c libraries/*.c -o player -lrt -lpthread -lm
 
-view:
-	gcc ./view.c ./libraries/*.c -Iinclude -o view
+view: view.c libraries/*
+	$(CC) $(CFLAGS) view.c libraries/*.c -o view -lrt -lpthread -lncurses -lm
 
 clean:
 	rm -f master player view
