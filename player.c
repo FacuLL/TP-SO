@@ -4,6 +4,8 @@
 
 int main(int argc, char const *argv[]){
 
+
+    //Referencio las memorias compartidas
     
     int fd_game_state = shm_open("/game_state", O_RDONLY, 0666);
     if (fd_game_state == -1) {
@@ -17,6 +19,8 @@ int main(int argc, char const *argv[]){
 		return -1;
 	}
 
+    close(fd_game_state);
+
     int fd_game_sync = shm_open("/game_sync", O_RDONLY, 0666);
     if (fd_game_sync == -1) {
         perror("shm_open");
@@ -29,12 +33,13 @@ int main(int argc, char const *argv[]){
 		return -1;
 	}
 
+    close(fd_game_sync);
+    
+    
     printf("Hijo Dice: %d",gameState->num_players);
     fflush(stdout);
 
-    close(fd_game_sync);
-    close(fd_game_state);
-
+    
     sem_post(&(sync->has_to_print));
     sem_wait(&(sync->can_player_move[0]));
     
