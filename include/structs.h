@@ -34,4 +34,15 @@
         sem_t can_player_move[9]; // Le indican a cada jugador que puede enviar 1 movimiento
     } SyncState;
 
+    typedef struct{
+        int width;
+        int height;
+        int delay; 
+        int timeout;
+        int seed;
+        char* view_path;
+        int num_players;
+        char * players_paths[9]; 
+    } Arguments;
+
 #endif

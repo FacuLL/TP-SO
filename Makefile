@@ -10,7 +10,7 @@ player: player.c libraries/*
 	$(CC) $(CFLAGS) player.c libraries/*.c -o player -lrt -lpthread -lm
 
 view: view.c libraries/*
-	$(CC) $(CFLAGS) view.c libraries/*.c -o view -lrt -lpthread -lncurses -lm
+	$(CC) $(CFLAGS) view.c libraries/*.c -o view -lrt -lpthread -lm
 
 clean:
 	rm -f master player view

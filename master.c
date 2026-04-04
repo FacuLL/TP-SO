@@ -11,34 +11,41 @@
 #include "semaphores.h"
 #include "utils.h"
 
-
-int delay = DELAY;
-int timeout = TIMEOUT;
-int seed;
-char * view_path = VIEW;
-pid_t view_pid;
-char * players_paths[9] = {};
+Arguments arguments = {
+    width = WIDTH;
+    height = HEIGHT;
+    delay = DELAY; 
+    timeout = TIMEOUT;
+    seed = SEED;
+    view_path = NULL;
+    num_players = 0;
+    players_paths[9];
+}; 
 
 void initializeArgs(int argc, char *argv[], Game **game);
 void exitError(const char * error);
 
 int main(int argc, char *argv[])
 {
-
+    
+    initializeArgs(argc, argv, &arguments);
     // Incializamos las memorias compartidas
 
-    Game * game = initializeShared("/game_state", sizeof(Game));
+    Game *game = initializeShared("/game_state", sizeof(Game));    
     if (game == NULL) return 1;
 
     SyncState * sync = initializeShared("/game_sync", sizeof(SyncState));
     if (sync == NULL) return 1;
     
-    initializeArgs(argc, argv, &game);
 
     // El tamaño es el struct + El tamaño del tablero y como estan solapados en el char *, resto su tamaño.
-    unsigned long newSize = sizeof(Game) * game->width * game->height * sizeof(char) - sizeof(char *);
+    unsigned long newSize = sizeof(Game) + game->width * game->height * sizeof(char) - sizeof(char) ;
+    
     munmap(game, sizeof(Game));
+    shm_unlink("/game_state");
+    
     game = initializeShared("/game_state", newSize);
+    
 
     char * width = intToStr(game->width);
     char * height = intToStr(game->height);
@@ -50,6 +57,8 @@ int main(int argc, char *argv[])
 
     
     //Inicializamos la vista 
+
+
 
     if (view_path != NULL) {
         if ((view_pid = fork()) == 0) {
@@ -63,8 +72,10 @@ int main(int argc, char *argv[])
 
     int fd[game->num_players][2];
 
+    printf("num players: %d \n",  game->num_players );
 
     for(int i = 0 ; i < game->num_players ; i++){
+        
         
         //Inicialización de pipes
         if(pipe(fd[i]) == -1) {
@@ -104,26 +115,21 @@ int main(int argc, char *argv[])
             close(fd[i][1]);
 
             game->players[i].pid = player_pid;
-
-            char buffer[100];
-            int n = read(fd[i][0], buffer, sizeof(buffer) - 1);
             
-            buffer[n] = '\0';
-            
-            printf("Padre recibió: %s de longitud %d del hijo %d de %d \n", buffer , n, i, game->num_players);
-
         }
+
     }
 
     // Logica en cada tick
-
     
     // Limpieza
+    if(view_path != NULL) kill(view_pid, SIGKILL);
 
-    kill(view_pid, SIGKILL);
     for (int i = 0; i < game->num_players; i++) {
         kill(game->players[i].pid, SIGKILL);
     }
+
+    printf("flag Salida \n");
 
     free(width);
     free(height);
@@ -142,11 +148,16 @@ int main(int argc, char *argv[])
     shm_unlink("/game_state");
     shm_unlink("/game_sync");
 
+    
+
+    printf("Terminado");
 
     return 0;
 }
 
-void initializeArgs(int argc, char *argv[], Game **game){
+void inirializeGame()
+
+void initializeArgs(int argc, char *argv[], Arguments **game){
     (*game)->width = WIDTH;
     (*game)->height = HEIGHT;
     (*game)->game_over = false;
