@@ -1,6 +1,7 @@
 #include <signal.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <sys/select.h>
 #include <math.h>
 #include "defaultValues.h"
 #include "structs.h"
@@ -10,7 +11,7 @@
 
 #define FOR_EACH_PLAYER(game, idx) for (int idx = 0; idx < (game)->num_players; idx++)
 
-int movements[8][2] = {{0, 0}};
+int movements[8][2] = {{0, 1}, {-1, 1}, {-1, 0}, {-1, -1}, {0, -1}, {1, -1}, {1, 0}, {1, 1}};
 
 Arguments arguments = {
     .width = WIDTH,
@@ -91,9 +92,85 @@ int main(int argc, char *argv[])
         }
     }
 
+    fd_set set;
+    struct timeval timeout = {.tv_sec = arguments.timeout};
+    int last_player_served = -1;
+
     // Logica en cada tick
     while (!game->game_over) {
+        // Escuchamos acciones
+        FD_ZERO(&set);
+        FOR_EACH_PLAYER(game, i) {
+            FD_SET(fd[i][0], &set);
+        }
+        int ret = select(FD_SETSIZE, &set, NULL, NULL, &timeout);
+        if (ret == 0) {
+            game->game_over = true;
+        } else if (ret < 0) {
+            exitError("Error on select");
+        } else {
+            int start_index = (last_player_served + 1) % game->num_players;
+            bool served_this_turn = false;
 
+            for (int i = 0; i < game->num_players && !served_this_turn; i++) {
+                // Calculamos el índice actual de forma circular
+                int player = (start_index + i) % game->num_players;
+
+                if (FD_ISSET(fd[player][0], &set)) {
+                    unsigned char move;
+                    ssize_t bytes = read(fd[player][0], &move, sizeof(move));
+                    if (bytes > 0) {
+                        // 1. Validar
+                        move -= '0';
+                        if (move >= 0 && move < 8) {
+    
+                            sem_wait(&sync->can_access_game_state); 
+
+                            int x = game->players[player].x;
+                            int y = game->players[player].y;
+                            int nextX = x + movements[move][0];
+                            int nextY = y + movements[move][1];
+
+                            bool inBounds = (nextX >= 0 && nextX < game->width && nextY >= 0 && nextY < game->height);
+                            
+                            if (inBounds && board[nextX][nextY] >= 1 && board[nextX][nextY] <= 9) {
+                                
+                                int value = board[nextX][nextY];
+
+                                // 2. Procesar movimiento
+                                game->players[player].score += value;
+                                game->players[player].valid_moves++;
+                                game->players[player].x = nextX;
+                                game->players[player].y = nextY;
+                                
+                                // Marcamos la celda con el ID del jugador (valor negativo)
+                                board[nextX][nextY] = -player; 
+
+                                sem_post(&sync->can_access_game_state);
+
+                                // 3. Notificar y imprimir
+                                sem_post(&sync->can_player_move[player]);
+                                sem_post(&sync->has_to_print);
+                                sem_wait(&sync->view_finished);
+
+                                last_player_served = player;
+                                served_this_turn = true;
+                                
+                            } else {
+                                game->players[player].invalid_moves++;
+                                
+                                sem_post(&sync->can_access_game_state);
+                                
+                                sem_post(&sync->can_player_move[player]); 
+                            }
+                        }
+                    } else if (bytes == 0) {
+                        // EOF: El jugador se cerró o bloqueó
+                        game->players[player].blocked = true;
+                    }
+                }
+            }
+        }
 
         // Checkea si ya debe terminar el juego
         bool all_blocked = true;
@@ -105,11 +182,9 @@ int main(int argc, char *argv[])
     }
     
     // Limpieza
-    if(arguments.view_path != NULL) kill(view_pid, SIGKILL);
 
     FOR_EACH_PLAYER(game, i) {
         close(fd[i][0]);
-        kill(game->players[i].pid, SIGKILL);
     }
 
     free(width);
