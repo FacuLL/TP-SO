@@ -14,10 +14,10 @@ int main(int argc, char *argv[]){
     //Referencio las memorias compartidas
 
     unsigned long gameSize = sizeof(Game) + width * height * sizeof(char) - sizeof(char);
-    Game *game = attachShared(SHARED_GAME, gameSize, 0);
+    Game *game = attachShared(SHARED_GAME, gameSize, false);
     if (game == NULL) return 1;
 
-    SyncState * sync = attachShared(SHARED_SYNC, sizeof(SyncState), 1);
+    SyncState * sync = attachShared(SHARED_SYNC, sizeof(SyncState), true);
     if (sync == NULL) return 1;
 
 

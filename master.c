@@ -34,7 +34,7 @@ int main(int argc, char *argv[])
 
     srand(arguments.seed);
     
-    unsigned long gameSize = sizeof(Game) + arguments.width * arguments.height * sizeof(char) - sizeof(char);
+    unsigned long gameSize = sizeof(Game) + arguments.width * arguments.height * sizeof(char);
     Game *game = initializeShared(SHARED_GAME, gameSize);    
     if (game == NULL) return 1;
     initializeGame(game, &arguments);

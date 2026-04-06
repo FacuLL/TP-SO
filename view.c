@@ -117,10 +117,10 @@ int main(int argc, char *argv[]) {
     int height = atoi(argv[2]);
     
     unsigned long gameSize = sizeof(Game) + (width * height - 1) * sizeof(char);
-    Game *game = attachShared(SHARED_GAME, gameSize, 0);
+    Game *game = attachShared(SHARED_GAME, gameSize, false);
     if (game == NULL) return 1;
 
-    SyncState * sync = attachShared(SHARED_SYNC, sizeof(SyncState), 1);
+    SyncState * sync = attachShared(SHARED_SYNC, sizeof(SyncState), true);
     if (sync == NULL) return 1;
 
     // Abrimos el terminal directamente con /dev/tty.

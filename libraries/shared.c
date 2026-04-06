@@ -27,7 +27,7 @@ void * initializeShared(const char * name, unsigned long size) {
     return ptr;
 }
 
-void * attachShared(const char * name, unsigned long size, int writable) {
+void * attachShared(const char * name, unsigned long size, bool writable) {
     int fd = shm_open(name, writable ? O_RDWR : O_RDONLY, 0);
 
     if (fd == -1) {
