@@ -101,7 +101,7 @@ int main(int argc, char *argv[])
         // Escuchamos acciones
         FD_ZERO(&set);
         FOR_EACH_PLAYER(game, i) {
-            FD_SET(fd[i][0], &set);
+            if (!game->players[i].blocked) FD_SET(fd[i][0], &set);
         }
         int ret = select(FD_SETSIZE, &set, NULL, NULL, &timeout);
         if (ret == 0) {
@@ -112,10 +112,9 @@ int main(int argc, char *argv[])
             int start_index = (last_player_served + 1) % game->num_players;
             bool served_this_turn = false;
 
-            for (int i = 0; i < game->num_players && !served_this_turn; i++) {
+            for (int i = 0; i < game->num_players; i++) {
                 // Calculamos el índice actual de forma circular
                 int player = (start_index + i) % game->num_players;
-
                 if (FD_ISSET(fd[player][0], &set)) {
                     unsigned char move;
                     ssize_t bytes = read(fd[player][0], &move, sizeof(move));
@@ -124,7 +123,9 @@ int main(int argc, char *argv[])
                         move -= '0';
                         if (move >= 0 && move < 8) {
     
-                            sem_wait(&sync->can_access_game_state); 
+                            sem_wait(&sync->master_priority);
+                            sem_wait(&sync->can_access_game_state);
+                            sem_post(&sync->master_priority);
 
                             int x = game->players[player].x;
                             int y = game->players[player].y;
@@ -134,7 +135,6 @@ int main(int argc, char *argv[])
                             bool inBounds = (nextX >= 0 && nextX < game->width && nextY >= 0 && nextY < game->height);
                             
                             if (inBounds && board[nextX][nextY] >= 1 && board[nextX][nextY] <= 9) {
-                                
                                 int value = board[nextX][nextY];
 
                                 // 2. Procesar movimiento
@@ -149,13 +149,12 @@ int main(int argc, char *argv[])
                                 sem_post(&sync->can_access_game_state);
 
                                 // 3. Notificar y imprimir
-                                sem_post(&sync->can_player_move[player]);
                                 sem_post(&sync->has_to_print);
                                 sem_wait(&sync->view_finished);
-
-                                last_player_served = player;
-                                served_this_turn = true;
                                 
+                                sem_post(&sync->can_player_move[player]);
+
+                                sleep(arguments.delay);
                             } else {
                                 game->players[player].invalid_moves++;
                                 
@@ -169,6 +168,7 @@ int main(int argc, char *argv[])
                         game->players[player].blocked = true;
                     }
                 }
+                last_player_served++;
             }
         }
 
