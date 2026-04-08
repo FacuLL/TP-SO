@@ -2,6 +2,8 @@
 #include "semaphores.h"
 #include "utils.h"
 
+int getPlayerId(Game *game);
+
 int main(int argc, char *argv[]){
 
     if (argc != 3) {
@@ -22,6 +24,7 @@ int main(int argc, char *argv[]){
 
     // Reconocer que player es
     int id = getPlayerId(game);
+    if (id == -1) return 1;
 
     bool hasFinished = false;
     while(!hasFinished) {
@@ -38,7 +41,7 @@ int main(int argc, char *argv[]){
 
         printf("%d", randInt(0, 7));
 
-        if (game->game_over) hasFinished = true;
+        if (game->players[id].blocked) hasFinished = true;
 
         sem_wait(&sync->can_access_readers_count);
             if (sync->readers_count-- == 1) sem_post(&sync->can_access_game_state);
@@ -59,4 +62,5 @@ int getPlayerId(Game *game) {
             return i;
         }
     }
+    return -1;
 }

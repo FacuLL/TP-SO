@@ -1,7 +1,7 @@
 #include "utils.h"
 
 void exitError(const char * error) {
-    fprintf(stderr, error);
+    fputs(error, stderr);
     exit(1);
 }
 

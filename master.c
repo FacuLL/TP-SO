@@ -110,7 +110,6 @@ int main(int argc, char *argv[])
             exitError("Error on select");
         } else {
             int start_index = (last_player_served + 1) % game->num_players;
-            bool served_this_turn = false;
 
             for (int i = 0; i < game->num_players; i++) {
                 // Calculamos el índice actual de forma circular
