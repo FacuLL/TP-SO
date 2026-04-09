@@ -208,21 +208,22 @@ void initializeGame(Game * game, Arguments * arguments) {
         .game_over = false,
     };
 
-    // Limpieza board
     char (*board)[game->width] = (char (*)[game->width])game->board;
+
+    // Llenar el tablero con recompensas primero
     for (int i = 0; i < game->height; i++) {
         for (int j = 0; j < game->width; j++) {
-            board[i][j] = 0;
+            board[i][j] = randInt(1, 9);
         }
     }
 
     double centerX = game->width / 2.0;
     double centerY = game->height / 2.0;
-    
+
     double radiusX = (game->width / 2.0) * 0.8;
     double radiusY = (game->height / 2.0) * 0.8;
 
-    // Inicializar data de players
+    // Inicializar data de players y colocarlos en el tablero encima de las recompensas
     for (int i = 0; i < game->num_players; i++) {
         game->players[i] = (Player) {
             .name = "Player",
@@ -235,7 +236,7 @@ void initializeGame(Game * game, Arguments * arguments) {
         double angle = (2.0 * PI / game->num_players) * i - (PI / 2.0);
         int x = (int)(centerX + radiusX * cos(angle));
         int y = (int)(centerY + radiusY * sin(angle));
-        
+
         // Corrección por si el redondeo los saca del tablero (índices 0 a W-1)
         if (x >= game->width) x = game->width - 1;
         if (y >= game->height) y = game->height - 1;
@@ -245,16 +246,7 @@ void initializeGame(Game * game, Arguments * arguments) {
         game->players[i].x = x;
         game->players[i].y = y;
 
-        // Actualizar board con la posicion del jugador (valores <= 0 indican jugador)
+        // Marcar celda con el ID del jugador (valores <= 0 indican jugador, -i para jugador i)
         board[y][x] = (char)(-i);
-    }
-
-    // Inicializar board con valores
-    for (int i = 0; i < game->height; i++) {
-        for (int j = 0; j < game->width; j++) {
-            if (board[i][j] == 0) {
-                board[i][j] = randInt(1, 9);
-            }
-        }
     }
 }
