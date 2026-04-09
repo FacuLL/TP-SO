@@ -118,9 +118,8 @@ int main(int argc, char *argv[])
                     unsigned char move;
                     ssize_t bytes = read(fd[player][0], &move, sizeof(move));
                     if (bytes > 0) {
-                        // 1. Validar
-                        move -= '0';
-                        if (move >= 0 && move < 8) {
+                        // 1. Validar:
+                        if (move < 8) {
     
                             sem_wait(&sync->master_priority);
                             sem_wait(&sync->can_access_game_state);

@@ -39,7 +39,9 @@ int main(int argc, char *argv[]){
 
         // Zona de acceso al game state
 
-        printf("%d", randInt(0, 7));
+        //write en vez de print porque el print no envía hasta llenar el buffer y los players se quedan colgados
+        unsigned char dir = (unsigned char)randInt(0, 7);
+        write(STDOUT_FILENO, &dir, 1);
 
         if (game->players[id].blocked) hasFinished = true;
 
