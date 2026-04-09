@@ -132,18 +132,18 @@ int main(int argc, char *argv[])
                             int nextY = y + movements[move][1];
 
                             bool inBounds = (nextX >= 0 && nextX < game->width && nextY >= 0 && nextY < game->height);
-                            
-                            if (inBounds && board[nextX][nextY] >= 1 && board[nextX][nextY] <= 9) {
-                                int value = board[nextX][nextY];
+
+                            if (inBounds && board[nextY][nextX] >= 1 && board[nextY][nextX] <= 9) {
+                                int value = board[nextY][nextX];
 
                                 // 2. Procesar movimiento
                                 game->players[player].score += value;
                                 game->players[player].valid_moves++;
                                 game->players[player].x = nextX;
                                 game->players[player].y = nextY;
-                                
+
                                 // Marcamos la celda con el ID del jugador (valor negativo)
-                                board[nextX][nextY] = -player; 
+                                board[nextY][nextX] = (char)(-player);
 
                                 sem_post(&sync->can_access_game_state);
 
@@ -210,8 +210,8 @@ void initializeGame(Game * game, Arguments * arguments) {
 
     // Limpieza board
     char (*board)[game->width] = (char (*)[game->width])game->board;
-    for (int i = 0; i < game->width; i++) {
-        for (int j = 0; j < game->height; j++) {
+    for (int i = 0; i < game->height; i++) {
+        for (int j = 0; j < game->width; j++) {
             board[i][j] = 0;
         }
     }
@@ -245,13 +245,13 @@ void initializeGame(Game * game, Arguments * arguments) {
         game->players[i].x = x;
         game->players[i].y = y;
 
-        // Actualizar board con la posicion del jugador
-        board[x][y] = i + '0';
+        // Actualizar board con la posicion del jugador (valores <= 0 indican jugador)
+        board[y][x] = (char)(-i);
     }
-    
+
     // Inicializar board con valores
-    for (int i = 0; i < game->width; i++) {
-        for (int j = 0; j < game->height; j++) {
+    for (int i = 0; i < game->height; i++) {
+        for (int j = 0; j < game->width; j++) {
             if (board[i][j] == 0) {
                 board[i][j] = randInt(1, 9);
             }
