@@ -27,6 +27,7 @@ int main(int argc, char *argv[]){
     if (id == -1) return 1;
 
     bool hasFinished = false;
+
     while(!hasFinished) {
         sem_wait(&sync->can_player_move[id]);
 
@@ -43,7 +44,7 @@ int main(int argc, char *argv[]){
         unsigned char dir = (unsigned char)randInt(0, 7);
         write(STDOUT_FILENO, &dir, 1);
 
-        if (game->players[id].blocked) hasFinished = true;
+        if (game->players[id].blocked || game->game_over) hasFinished = true;
 
         sem_wait(&sync->can_access_readers_count);
             if (sync->readers_count-- == 1) sem_post(&sync->can_access_game_state);
