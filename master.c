@@ -114,9 +114,13 @@ int main(int argc, char *argv[])
         }
         int ret = select(FD_SETSIZE, &set, NULL, NULL, &timeout);
         if (ret == 0) {
-            game->game_over = true;
+            sem_wait(&sync->master_priority);
+            sem_wait(&sync->can_access_game_state);
+            sem_post(&sync->master_priority);
+                game->game_over = true;
+            sem_post(&sync->master_priority);
         } else if (ret < 0) {
-            exitError("Error on select");
+            perror("Error en select: ");
         } else {
             int start_index = (last_player_served + 1) % game->num_players;
 
@@ -172,7 +176,11 @@ int main(int argc, char *argv[])
                         }
                     } else if (bytes == 0) {
                         // EOF: El jugador se cerró o bloqueó
-                        game->players[player].blocked = true;
+                        sem_wait(&sync->master_priority);
+                        sem_wait(&sync->can_access_game_state);
+                        sem_post(&sync->master_priority);
+                            game->players[player].blocked = true;
+                        sem_post(&sync->can_access_game_state);
                     }
                 }
                 last_player_served++;
