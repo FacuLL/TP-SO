@@ -10,7 +10,7 @@ void initializeSemaphores(SyncState * state, Game * game){
     initSemaphore(&(state->can_access_readers_count), 1);
     state->readers_count=0;
     for(int i = 0 ; i < game->num_players ; i++){
-        initSemaphore(&(state->can_player_move[i]), 1);
+        initSemaphore(&(state->can_player_move[i]), 0);
     }
 }
 
