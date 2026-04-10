@@ -89,6 +89,9 @@ int main(int argc, char *argv[])
         } else{
             close(fd[i][1]);
             game->players[i].pid = player_pid;
+            FOR_EACH_PLAYER(game, i) {
+                sem_post(&sync->can_player_move[i]);
+            }
         }
     }
 
@@ -174,7 +177,9 @@ int main(int argc, char *argv[])
         // Checkea si ya debe terminar el juego
         bool all_blocked = true;
         FOR_EACH_PLAYER(game, i) {
-            game->players[i].blocked = isPlayerBlocked(game, i);
+            if (!game->players[i].blocked) {
+                game->players[i].blocked = isPlayerBlocked(game, i);
+            }
             if (!game->players[i].blocked) all_blocked = false;
         }
         if (all_blocked) game->game_over = true;
