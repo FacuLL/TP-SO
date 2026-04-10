@@ -202,7 +202,10 @@ int main(int argc, char *argv[])
 
     FOR_EACH_PLAYER(game, i) {
         close(fd[i][0]);
+        kill(game->players[i].pid, SIGKILL);
     }
+
+    kill(view_pid, SIGKILL);
 
     free(width);
     free(height);
