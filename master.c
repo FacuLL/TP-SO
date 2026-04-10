@@ -2,6 +2,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <sys/select.h>
+#include <errno.h>
 #include <math.h>
 #include "defaultValues.h"
 #include "structs.h"
@@ -125,12 +126,14 @@ int main(int argc, char *argv[])
                 game->game_over = true;
             sem_post(&sync->can_access_game_state);
         } else if (ret < 0) {
-            perror("Error en select: ");
-            sem_wait(&sync->master_priority);
-            sem_wait(&sync->can_access_game_state);
-            sem_post(&sync->master_priority);
-                game->game_over = true;
-            sem_post(&sync->can_access_game_state);
+            if (errno != EINTR) {
+                perror("Error en select");
+                sem_wait(&sync->master_priority);
+                sem_wait(&sync->can_access_game_state);
+                sem_post(&sync->master_priority);
+                    game->game_over = true;
+                sem_post(&sync->can_access_game_state);
+            }
         } else {
             int start_index = (last_player_served + 1) % game->num_players;
 
