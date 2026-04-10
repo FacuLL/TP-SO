@@ -107,10 +107,6 @@ int main(int argc, char *argv[])
 
     fd_set set;
 
-    struct timeval timeout = {.tv_sec = arguments.timeout};
-    struct timespec delay = {
-        .tv_nsec = arguments.delay * 1000000      /* nanoseconds */
-    };
     int last_player_served = -1;
 
     // Logica en cada tick
@@ -120,6 +116,7 @@ int main(int argc, char *argv[])
         FOR_EACH_PLAYER(game, i) {
             if (!game->players[i].blocked) FD_SET(fd[i][0], &set);
         }
+        struct timeval timeout = {.tv_sec = arguments.timeout};
         int ret = select(FD_SETSIZE, &set, NULL, NULL, &timeout);
         if (ret == 0) {
             sem_wait(&sync->master_priority);
@@ -178,6 +175,7 @@ int main(int argc, char *argv[])
                                 
                                 sem_post(&sync->can_player_move[player]);
 
+                                struct timespec delay = {.tv_nsec = arguments.delay * 1000000};
                                 nanosleep(&delay, &delay);
                             } else {
                                 game->players[player].invalid_moves++;
