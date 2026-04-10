@@ -10,6 +10,14 @@
 #include "utils.h"
 
 #define FOR_EACH_PLAYER(game, idx) for (int idx = 0; idx < (game)->num_players; idx++)
+#define ACCESS_GAME_STATE(code) \
+    do { \
+        sem_wait(&sync->master_priority); \
+        sem_wait(&sync->can_access_game_state); \
+        sem_post(&sync->master_priority); \
+        code; \
+        sem_post(&sync->master_priority); \
+    } while (0); 
 
 int movements[8][2] = {{0, 1}, {-1, 1}, {-1, 0}, {-1, -1}, {0, -1}, {1, -1}, {1, 0}, {1, 1}};
 
@@ -118,9 +126,14 @@ int main(int argc, char *argv[])
             sem_wait(&sync->can_access_game_state);
             sem_post(&sync->master_priority);
                 game->game_over = true;
-            sem_post(&sync->master_priority);
+            sem_post(&sync->can_access_game_state);
         } else if (ret < 0) {
             perror("Error en select: ");
+            sem_wait(&sync->master_priority);
+            sem_wait(&sync->can_access_game_state);
+            sem_post(&sync->master_priority);
+                game->game_over = true;
+            sem_post(&sync->can_access_game_state);
         } else {
             int start_index = (last_player_served + 1) % game->num_players;
 
