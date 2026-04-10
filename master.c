@@ -79,6 +79,8 @@ int main(int argc, char *argv[])
             dup2(fd[i][1], STDOUT_FILENO);
             close(fd[i][1]);
 
+            game->players[i].pid = getpid();
+
             //NO SACAR EL NULL, *args debe terminar en el. Se elimino momentaneamente y causo MUCHOS problemas
             char *args[] = {arguments.players_paths[i], width, height, NULL};
 
@@ -88,11 +90,11 @@ int main(int argc, char *argv[])
             exit(1);
         } else{
             close(fd[i][1]);
-            game->players[i].pid = player_pid;
-            FOR_EACH_PLAYER(game, i) {
-                sem_post(&sync->can_player_move[i]);
-            }
         }
+    }
+    
+    FOR_EACH_PLAYER(game, i) {
+        sem_post(&sync->can_player_move[i]);
     }
 
     fd_set set;
