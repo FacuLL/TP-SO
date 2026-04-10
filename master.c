@@ -202,7 +202,11 @@ int main(int argc, char *argv[])
         bool all_blocked = true;
         FOR_EACH_PLAYER(game, i) {
             if (!game->players[i].blocked) {
-                game->players[i].blocked = isPlayerBlocked(game, i);
+                sem_wait(&sync->master_priority);
+                sem_wait(&sync->can_access_game_state);
+                sem_post(&sync->master_priority);
+                    game->players[i].blocked = isPlayerBlocked(game, i);
+                sem_post(&sync->can_access_game_state);
             }
             if (!game->players[i].blocked) all_blocked = false;
         }
