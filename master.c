@@ -216,23 +216,33 @@ int main(int argc, char *argv[])
     }
     
     // Limpieza
-
-    FOR_EACH_PLAYER(game, i) {
-        close(fd[i][0]);
-        kill(game->players[i].pid, SIGKILL);
+    if (arguments.view_path != NULL) {
+        sem_post(&sync->has_to_print);
+        sem_wait(&sync->view_finished);
     }
 
-    kill(view_pid, SIGKILL);
+    FOR_EACH_PLAYER(game, i) {
+        sem_post(&sync->can_player_move[i]);
+    }
+
+    FOR_EACH_PLAYER(game, i) {
+        waitpid(game->players[i].pid, NULL, 0);
+        close(fd[i][0]);
+    }
+
+    if (arguments.view_path != NULL) {
+        waitpid(view_pid, NULL, 0);
+    }
 
     free(width);
     free(height);
-    
+
     munmap(game, gameSize);
     munmap(sync, sizeof(SyncState));
     shm_unlink(SHARED_GAME);
     shm_unlink(SHARED_SYNC);
 
-    printf("Terminado");
+    printf("Terminado\n");
 
     return 0;
 }
