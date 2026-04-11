@@ -52,6 +52,8 @@ int main(int argc, char *argv[]){
 
     }
 
+    close(STDOUT_FILENO);
+
     munmap(game, gameSize);
     munmap(sync, sizeof(SyncState));
 

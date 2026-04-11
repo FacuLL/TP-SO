@@ -17,7 +17,7 @@
         sem_wait(&sync->can_access_game_state); \
         sem_post(&sync->master_priority); \
         code; \
-        sem_post(&sync->master_priority); \
+        sem_post(&sync->can_access_game_state); \
     } while (0); 
 
 int movements[8][2] = {{0, 1}, {-1, 1}, {-1, 0}, {-1, -1}, {0, -1}, {1, -1}, {1, 0}, {1, 1}};
@@ -36,6 +36,7 @@ void initializeGame(Game * game, Arguments * arguments);
 
 int main(int argc, char *argv[])
 {
+
     initializeArgs(argc, argv, &arguments, "+w:h:d:t:s:v:p");
     if (arguments.num_players < 1) {
         exitError("Debe seleccionarse al menos 1 jugador con -p\n");
@@ -44,7 +45,7 @@ int main(int argc, char *argv[])
     srand(arguments.seed);
     
     unsigned long gameSize = sizeof(Game) + arguments.width * arguments.height * sizeof(char);
-    Game *game = initializeShared(SHARED_GAME, gameSize);    
+    Game *game = initializeShared(SHARED_GAME, gameSize);
     if (game == NULL) return 1;
     initializeGame(game, &arguments);
     char (*board)[game->width] = (char (*)[game->width])game->board;
@@ -57,6 +58,28 @@ int main(int argc, char *argv[])
 
     //Inicializamos los semaforos
     initializeSemaphores(sync, game);
+
+    system("clear");
+
+    printf(
+        "width: %d\n"
+        "height: %d\n"
+        "delay: %d ms\n"
+        "timeout: %d s\n"
+        "seed: %d\n"
+        "view: %s\n"
+        "num_players: %d\n",
+        arguments.width, 
+        arguments.height, 
+        arguments.delay, 
+        arguments.timeout,
+        arguments.seed,
+        arguments.view_path == NULL ? "-" : arguments.view_path,
+        arguments.num_players
+    );
+
+    sleep(2);
+    system("clear");
     
     //Inicializamos la vista 
     int view_pid;
@@ -145,7 +168,7 @@ int main(int argc, char *argv[])
                     ssize_t bytes = read(fd[player][0], &move, sizeof(move));
                     if (bytes > 0) {
                         // 1. Validar:
-                        if (move < 8) {
+                        if (move >= 0 && move < 8) {
     
                             sem_wait(&sync->master_priority);
                             sem_wait(&sync->can_access_game_state);
@@ -170,11 +193,19 @@ int main(int argc, char *argv[])
                                 // Marcamos la celda con el ID del jugador (valor negativo)
                                 board[nextY][nextX] = (char)(-player);
 
+                                FOR_EACH_PLAYER(game, j) {
+                                    if (!game->players[j].blocked) {
+                                        game->players[j].blocked = isPlayerBlocked(game, j);
+                                    }
+                                }
+
                                 sem_post(&sync->can_access_game_state);
 
                                 // 3. Notificar y imprimir
-                                sem_post(&sync->has_to_print);
-                                sem_wait(&sync->view_finished);
+                                if (arguments.view_path != NULL) {
+                                    sem_post(&sync->has_to_print);
+                                    sem_wait(&sync->view_finished);
+                                }
                                 
                                 sem_post(&sync->can_player_move[player]);
 
@@ -187,6 +218,14 @@ int main(int argc, char *argv[])
                                 
                                 sem_post(&sync->can_player_move[player]); 
                             }
+                        } else {
+                            sem_wait(&sync->master_priority);
+                            sem_wait(&sync->can_access_game_state);
+                            sem_post(&sync->master_priority);
+                                game->players[player].invalid_moves++;
+                            sem_post(&sync->can_access_game_state);
+                            
+                            sem_post(&sync->can_player_move[player]); 
                         }
                     } else if (bytes == 0) {
                         // EOF: El jugador se cerró o bloqueó
@@ -204,26 +243,33 @@ int main(int argc, char *argv[])
         // Checkea si ya debe terminar el juego
         bool all_blocked = true;
         FOR_EACH_PLAYER(game, i) {
-            if (!game->players[i].blocked) {
-                sem_wait(&sync->master_priority);
-                sem_wait(&sync->can_access_game_state);
-                sem_post(&sync->master_priority);
-                    game->players[i].blocked = isPlayerBlocked(game, i);
-                sem_post(&sync->can_access_game_state);
-            }
             if (!game->players[i].blocked) all_blocked = false;
         }
-        if (all_blocked) game->game_over = true;
+        if (all_blocked) {
+            sem_wait(&sync->master_priority);
+            sem_wait(&sync->can_access_game_state);
+            sem_post(&sync->master_priority);
+                game->game_over = true;
+            sem_post(&sync->can_access_game_state);
+        }
+    }
+
+    if (arguments.view_path != NULL) {
+        sem_post(&sync->has_to_print);
+        sem_wait(&sync->view_finished);
     }
     
     // Limpieza
+    int status;
+
+    waitpid(view_pid, &status, 0);
+    printf("View exited (%d)\n", status);
 
     FOR_EACH_PLAYER(game, i) {
         close(fd[i][0]);
-        kill(game->players[i].pid, SIGKILL);
+        waitpid(game->players[i].pid, &status, 0);
+        printf("Player player (%d) exited (%d) with a score of %d / %d / %d\n", i, status, game->players[i].score, game->players[i].valid_moves, game->players[i].invalid_moves);
     }
-
-    kill(view_pid, SIGKILL);
 
     free(width);
     free(height);

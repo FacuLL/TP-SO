@@ -10,6 +10,7 @@ player: player.c libraries/*
 	$(CC) $(CFLAGS) player.c libraries/*.c -o player -lrt -lpthread -lm
 
 view: view.c libraries/*
+	apt-get install libncurses5-dev libncursesw5-dev
 	$(CC) $(CFLAGS) view.c libraries/*.c -o view -lrt -lpthread -lm -lncurses
 
 clean:
