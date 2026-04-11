@@ -72,14 +72,16 @@ void initializeArgs(int argc, char *argv[], Arguments * arguments, char * argsRe
 
 bool isPlayerBlocked(Game * game, int player_id) {
     char (*board)[game->width] = (char (*)[game->width])game->board;
-    for (int i = -1; i < 1; i++) {
-        for (int j = -1; j < 1; j++) {
-            if (i != 0 || j != 0) {
-                int x = game->players[player_id].x;
-                int y = game->players[player_id].y;
-                int value = board[x+i][y+j];
-                if (value > 0 && value < 10) return false;
-            }
+    int px = game->players[player_id].x;  // columna
+    int py = game->players[player_id].y;  // fila
+    for (int dy = -1; dy <= 1; dy++) {
+        for (int dx = -1; dx <= 1; dx++) {
+            if (dy == 0 && dx == 0) continue;
+            int nx = px + dx;
+            int ny = py + dy;
+            if (nx < 0 || nx >= game->width || ny < 0 || ny >= game->height) continue;
+            int value = board[ny][nx];
+            if (value >= 1 && value <= 9) return false;
         }
     }
     return true;
