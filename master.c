@@ -140,6 +140,7 @@ int main(int argc, char *argv[])
                 // Calculamos el índice actual de forma circular
                 int player = (start_index + i) % game->num_players;
                 if (FD_ISSET(fd[player][0], &set)) {
+                    last_player_served = player;
                     unsigned char move;
                     ssize_t bytes = read(fd[player][0], &move, sizeof(move));
                     if (bytes > 0) {
@@ -196,7 +197,6 @@ int main(int argc, char *argv[])
                         sem_post(&sync->can_access_game_state);
                     }
                 }
-                last_player_served++;
             }
         }
 
