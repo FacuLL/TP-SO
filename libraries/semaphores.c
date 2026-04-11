@@ -3,8 +3,8 @@
 void initSemaphore(sem_t *sem, unsigned int value);
 
 void initializeSemaphores(SyncState * state, Game * game){
-    initSemaphore(&(state->has_to_print), 1);
-    initSemaphore(&(state->view_finished), 1);
+    initSemaphore(&(state->has_to_print), 0);
+    initSemaphore(&(state->view_finished), 0);
     initSemaphore(&(state->master_priority), 1);
     initSemaphore(&(state->can_access_game_state), 1);
     initSemaphore(&(state->can_access_readers_count), 1);
