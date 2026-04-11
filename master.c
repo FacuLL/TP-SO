@@ -259,8 +259,9 @@ int main(int argc, char *argv[])
     if (arguments.view_path != NULL) {
         sem_post(&sync->has_to_print);
         sem_wait(&sync->view_finished);
+        waitpid(view_pid, NULL, 0);
     }
-    
+
     // Limpieza
     int status;
 
@@ -268,15 +269,11 @@ int main(int argc, char *argv[])
         sem_post(&sync->can_player_move[i]);
     }
 
+    printf("\n");
     FOR_EACH_PLAYER(game, i) {
         waitpid(game->players[i].pid, &status, 0);
         close(fd[i][0]);
         printf("Player %s (%d) exited (%d) with a score of %d / %d / %d\n", arguments.players_paths[i], i, status, game->players[i].score, game->players[i].valid_moves, game->players[i].invalid_moves);
-    }
-
-    if (arguments.view_path != NULL) {
-        waitpid(view_pid, &status, 0);
-        printf("View exited (%d)\n", status);
     }
 
     free(width);
@@ -286,8 +283,6 @@ int main(int argc, char *argv[])
     munmap(sync, sizeof(SyncState));
     shm_unlink(SHARED_GAME);
     shm_unlink(SHARED_SYNC);
-
-    printf("Terminado\n");
 
     return 0;
 }
