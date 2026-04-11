@@ -61,6 +61,9 @@ void initializeArgs(int argc, char *argv[], Arguments * arguments, char * argsRe
                 if (num_players < MIN_PLAYERS)
                     exitError("Debe haber al menos un jugador después de -p\n");
 
+                if(arguments->timeout < arguments->delay)
+                    exitError("El timeout debe ser mayor al delay\n");
+
                 arguments->num_players = (unsigned char)num_players;
                 break;
             } default:
