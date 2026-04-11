@@ -77,6 +77,9 @@ int main(int argc, char *argv[])
         arguments.view_path == NULL ? "-" : arguments.view_path,
         arguments.num_players
     );
+    FOR_EACH_PLAYER(game, i) {
+        printf("\t%s\n", arguments.players_paths[i]);
+    }
 
     sleep(2);
     system("clear");
@@ -268,7 +271,7 @@ int main(int argc, char *argv[])
     FOR_EACH_PLAYER(game, i) {
         close(fd[i][0]);
         waitpid(game->players[i].pid, &status, 0);
-        printf("Player player (%d) exited (%d) with a score of %d / %d / %d\n", i, status, game->players[i].score, game->players[i].valid_moves, game->players[i].invalid_moves);
+        printf("Player %s (%d) exited (%d) with a score of %d / %d / %d\n", arguments.players_paths[i], i, status, game->players[i].score, game->players[i].valid_moves, game->players[i].invalid_moves);
     }
 
     free(width);
