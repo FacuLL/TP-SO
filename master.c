@@ -83,21 +83,20 @@ int main(int argc, char *argv[])
             perror("fork");
             exit(EXIT_FAILURE);
         } else if (player_pid == 0){
-            //Se redirige el pipe 
+            //Se redirige el pipe
             close(fd[i][0]);
             dup2(fd[i][1], STDOUT_FILENO);
             close(fd[i][1]);
-
-            game->players[i].pid = getpid();
 
             //NO SACAR EL NULL, *args debe terminar en el. Se elimino momentaneamente y causo MUCHOS problemas
             char *args[] = {arguments.players_paths[i], width, height, NULL};
 
             //LLamamos al programa de la dirección correspondiente
             execvp(args[0], args);
-            perror("Un jugador genera un error"); 
+            perror("Un jugador genera un error");
             exit(1);
         } else{
+            game->players[i].pid = player_pid;
             close(fd[i][1]);
         }
     }
