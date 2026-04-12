@@ -50,6 +50,10 @@ Make clean
 
 Make test
 
+Peden eliminarse los archivos con el comando:
+
+Make test-clean
+
 --------------------------------------------------
 
 EJECUCIÓN
