@@ -19,7 +19,7 @@
         code; \
         sem_post(&sync->can_access_game_state); \
     } while (0); 
-    
+
 int movements[8][2] = {{0, -1}, {1, -1}, {1, 0}, {1, 1}, {0, 1}, {-1, 1}, {-1, 0}, {-1, -1}};
 
 Arguments arguments = {
@@ -109,20 +109,21 @@ int main(int argc, char *argv[])
             perror("fork");
             exit(EXIT_FAILURE);
         } else if (player_pid == 0){
-            //Se redirige el pipe
+            //Se redirige el pipe 
             close(fd[i][0]);
             dup2(fd[i][1], STDOUT_FILENO);
             close(fd[i][1]);
+
+            game->players[i].pid = getpid();
 
             //NO SACAR EL NULL, *args debe terminar en el. Se elimino momentaneamente y causo MUCHOS problemas
             char *args[] = {arguments.players_paths[i], width, height, NULL};
 
             //LLamamos al programa de la dirección correspondiente
             execvp(args[0], args);
-            perror("Un jugador genera un error");
+            perror("Un jugador genera un error"); 
             exit(1);
         } else{
-            game->players[i].pid = player_pid;
             close(fd[i][1]);
         }
     }
@@ -131,7 +132,6 @@ int main(int argc, char *argv[])
         sem_post(&sync->can_player_move[i]);
     }
 
-    struct timeval timeout = {.tv_sec = arguments.timeout};
     fd_set set;
 
     int last_player_served = -1;
@@ -143,6 +143,7 @@ int main(int argc, char *argv[])
         FOR_EACH_PLAYER(game, i) {
             if (!game->players[i].blocked) FD_SET(fd[i][0], &set);
         }
+        struct timeval timeout = {.tv_sec = arguments.timeout};
         int ret = select(FD_SETSIZE, &set, NULL, NULL, &timeout);
         if (ret == 0) {
             sem_wait(&sync->master_priority);
@@ -166,7 +167,6 @@ int main(int argc, char *argv[])
                 // Calculamos el índice actual de forma circular
                 int player = (start_index + i) % game->num_players;
                 if (FD_ISSET(fd[player][0], &set)) {
-                    last_player_served = player;
                     unsigned char move;
                     ssize_t bytes = read(fd[player][0], &move, sizeof(move));
                     if (bytes > 0) {
@@ -192,9 +192,6 @@ int main(int argc, char *argv[])
                                 game->players[player].valid_moves++;
                                 game->players[player].x = nextX;
                                 game->players[player].y = nextY;
-
-                                // Reseteo el timeout
-                                timeout = (struct timeval) {.tv_sec = arguments.timeout};
 
                                 // Marcamos la celda con el ID del jugador (valor negativo)
                                 board[nextY][nextX] = (char)(-player);
@@ -242,6 +239,7 @@ int main(int argc, char *argv[])
                         sem_post(&sync->can_access_game_state);
                     }
                 }
+                last_player_served++;
             }
         }
 
@@ -262,30 +260,29 @@ int main(int argc, char *argv[])
     if (arguments.view_path != NULL) {
         sem_post(&sync->has_to_print);
         sem_wait(&sync->view_finished);
-        waitpid(view_pid, NULL, 0);
     }
-
+    
     // Limpieza
     int status;
 
-    FOR_EACH_PLAYER(game, i) {
-        sem_post(&sync->can_player_move[i]);
-    }
+    waitpid(view_pid, &status, 0);
+    printf("View exited (%d)\n", status);
 
-    printf("\n");
     FOR_EACH_PLAYER(game, i) {
-        waitpid(game->players[i].pid, &status, 0);
         close(fd[i][0]);
+        waitpid(game->players[i].pid, &status, 0);
         printf("Player %s (%d) exited (%d) with a score of %d / %d / %d\n", arguments.players_paths[i], i, status, game->players[i].score, game->players[i].valid_moves, game->players[i].invalid_moves);
     }
 
     free(width);
     free(height);
-
+    
     munmap(game, gameSize);
     munmap(sync, sizeof(SyncState));
     shm_unlink(SHARED_GAME);
     shm_unlink(SHARED_SYNC);
+
+    printf("Terminado");
 
     return 0;
 }

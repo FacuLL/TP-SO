@@ -70,13 +70,14 @@ int main(int argc, char *argv[]){
 
 int playerMovement(int id, int height , int width, Game *game){
     char (*board)[game->width] = (char (*)[game->width])game->board;
-    
+
     while(
-        width <= game->players[id].x + movements[vector][0] ||
+        (width <= game->players[id].x + movements[vector][0] ||
         0 >  game->players[id].x + movements[vector][0] ||
         height <= game->players[id].y + movements[vector][1] ||
         0 > game->players[id].y + movements[vector][1] ||
-        board[game->players[id].x + movements[vector][0]][game->players[id].y + movements[vector][1]] <= 0
+        board[game->players[id].y + movements[vector][1]][game->players[id].x + movements[vector][0]] <= 0) &&
+        (!game->players[id].blocked)
     )
     {
         rotateVector();
