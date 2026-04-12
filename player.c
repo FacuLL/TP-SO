@@ -4,6 +4,14 @@
 
 int getPlayerId(Game *game);
 
+int playerMovement(int id, int height , int width, Game * game);
+
+void rotateVector();
+
+int movements[8][2] = {{0, -1}, {1, -1}, {1, 0}, {1, 1}, {0, 1}, {-1, 1}, {-1, 0}, {-1, -1}};
+
+int vector = 0;
+
 int main(int argc, char *argv[]){
 
     if (argc != 3) {
@@ -41,7 +49,7 @@ int main(int argc, char *argv[]){
         // Zona de acceso al game state
 
         //write en vez de print porque el print no envía hasta llenar el buffer y los players se quedan colgados
-        unsigned char dir = (unsigned char)randInt(0, 7);
+        unsigned char dir = (unsigned char)playerMovement(id, height, width, game);
         write(STDOUT_FILENO, &dir, 1);
 
         if (game->players[id].blocked || game->game_over) hasFinished = true;
@@ -58,6 +66,28 @@ int main(int argc, char *argv[]){
     munmap(sync, sizeof(SyncState));
 
     return 0;
+}
+
+int playerMovement(int id, int height , int width, Game *game){
+    char (*board)[game->width] = (char (*)[game->width])game->board;
+    
+    while(
+        width <= game->players[id].x + movements[vector][0] ||
+        0 >  game->players[id].x + movements[vector][0] ||
+        height <= game->players[id].y + movements[vector][1] ||
+        0 > game->players[id].y + movements[vector][1] ||
+        board[game->players[id].x + movements[vector][0]][game->players[id].y + movements[vector][1]] <= 0
+    )
+    {
+        rotateVector();
+    }
+
+    return vector;
+}
+
+void rotateVector(){
+    ++vector;
+    if(vector > 7) vector = 0;
 }
 
 int getPlayerId(Game *game) {

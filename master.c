@@ -19,8 +19,8 @@
         code; \
         sem_post(&sync->can_access_game_state); \
     } while (0); 
-
-int movements[8][2] = {{0, 1}, {-1, 1}, {-1, 0}, {-1, -1}, {0, -1}, {1, -1}, {1, 0}, {1, 1}};
+    
+int movements[8][2] = {{0, -1}, {1, -1}, {1, 0}, {1, 1}, {0, 1}, {-1, 1}, {-1, 0}, {-1, -1}};
 
 Arguments arguments = {
     .width = WIDTH,
