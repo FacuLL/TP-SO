@@ -11,8 +11,8 @@
 #include "shared.h"
 #include "semaphores.h"
 #include "utils.h"
-#define _USE_MATH_DEFINES
 
+#define _USE_MATH_DEFINES
 #define FOR_EACH_PLAYER(game, idx) for (int idx = 0; idx < (game)->num_players; idx++)
 #define ACCESS_GAME_STATE(code) \
     do { \
@@ -281,13 +281,15 @@ int main(int argc, char *argv[])
     }
 
     FOR_EACH_PLAYER(game, i) {
+        sem_post(&sync->can_player_move[i]);
+    }
+
+    FOR_EACH_PLAYER(game, i) {
         waitpid(game->players[i].pid, &status, 0);
         printf("Player %s (%d) exited (%d) with a score of %u / %u / %u\n", arguments.players_paths[i], i, status, game->players[i].score, game->players[i].valid_moves, game->players[i].invalid_moves);
     }
 
     freeAll(game, sync, height, width, fd);
-
-    printf("Terminado");
 
     return 0;
 }
