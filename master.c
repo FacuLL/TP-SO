@@ -15,14 +15,6 @@
 #include "utils.h"
 
 #define FOR_EACH_PLAYER(game, idx) for (int idx = 0; idx < (game)->num_players; idx++)
-#define ACCESS_GAME_STATE(code) \
-    do { \
-        sem_wait(&sync->master_priority); \
-        sem_wait(&sync->can_access_game_state); \
-        sem_post(&sync->master_priority); \
-        code; \
-        sem_post(&sync->can_access_game_state); \
-    } while (0); 
 
 int movements[8][2] = {{0, -1}, {1, -1}, {1, 0}, {1, 1}, {0, 1}, {-1, 1}, {-1, 0}, {-1, -1}};
 
@@ -159,20 +151,17 @@ int main(int argc, char *argv[])
         }
         struct timeval timeout = {.tv_sec = arguments.timeout};
         int ret = select(max_fd + 1, &set, NULL, NULL, &timeout);
+
+        sem_wait(&sync->master_priority);
+        sem_wait(&sync->can_access_game_state);
+        sem_post(&sync->master_priority);
+
         if (ret == 0) {
-            sem_wait(&sync->master_priority);
-            sem_wait(&sync->can_access_game_state);
-            sem_post(&sync->master_priority);
-                game->game_over = true;
-            sem_post(&sync->can_access_game_state);
+            game->game_over = true;
         } else if (ret < 0) {
             if (errno != EINTR) {
                 perror("Error en select");
-                sem_wait(&sync->master_priority);
-                sem_wait(&sync->can_access_game_state);
-                sem_post(&sync->master_priority);
-                    game->game_over = true;
-                sem_post(&sync->can_access_game_state);
+                game->game_over = true;
             }
         } else {
             int start_index = (last_player_served + 1) % game->num_players;
@@ -186,10 +175,6 @@ int main(int argc, char *argv[])
                     if (bytes > 0) {
                         // 1. Validar:
                         if (move < 8) {
-                            sem_wait(&sync->master_priority);
-                            sem_wait(&sync->can_access_game_state);
-                            sem_post(&sync->master_priority);
-
                             int x = game->players[player].x;
                             int y = game->players[player].y;
                             int nextX = x + movements[move][0];
@@ -215,62 +200,51 @@ int main(int argc, char *argv[])
                                     }
                                 }
 
-                                sem_post(&sync->can_access_game_state);
-
                                 sem_post(&sync->can_player_move[player]);
 
                                 // 3. Notificar y imprimir
                                 if (arguments.view_path != NULL) {
+                                    sem_post(&sync->can_access_game_state);
+
                                     sem_post(&sync->has_to_print);
                                     sem_wait(&sync->view_finished);
+
                                     struct timespec delay = {
                                         .tv_sec = arguments.delay / 1000, 
                                         .tv_nsec = (arguments.delay % 1000) * 1000000
                                     };
                                     nanosleep(&delay, &delay);
+                                    
+                                    sem_wait(&sync->master_priority);
+                                    sem_wait(&sync->can_access_game_state);
+                                    sem_post(&sync->master_priority);
                                 }
                                 
                             } else {
                                 game->players[player].invalid_moves++;
-                                
-                                sem_post(&sync->can_access_game_state);
-                                
                                 sem_post(&sync->can_player_move[player]); 
                             }
                         } else {
-                            sem_wait(&sync->master_priority);
-                            sem_wait(&sync->can_access_game_state);
-                            sem_post(&sync->master_priority);
-                                game->players[player].invalid_moves++;
-                            sem_post(&sync->can_access_game_state);
-                            
+                            game->players[player].invalid_moves++;
                             sem_post(&sync->can_player_move[player]); 
                         }
                     } else if (bytes == 0) {
-                        // EOF: El jugador se cerró o bloqueó
-                        sem_wait(&sync->master_priority);
-                        sem_wait(&sync->can_access_game_state);
-                        sem_post(&sync->master_priority);
-                            game->players[player].blocked = true;
-                        sem_post(&sync->can_access_game_state);
+                        game->players[player].blocked = true;
                     }
                     last_player_served = player;
                 }
             }
         }
 
-        // Checkea si ya debe terminar el juego
         bool all_blocked = true;
         FOR_EACH_PLAYER(game, i) {
             if (!game->players[i].blocked) all_blocked = false;
         } 
         if (all_blocked) {
-            sem_wait(&sync->master_priority);
-            sem_wait(&sync->can_access_game_state);
-            sem_post(&sync->master_priority);
-                game->game_over = true;
-            sem_post(&sync->can_access_game_state);
+            game->game_over = true;
         }
+
+        sem_post(&sync->can_access_game_state);
     }
 
     // Limpieza
