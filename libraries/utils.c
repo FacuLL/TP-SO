@@ -6,8 +6,10 @@ void exitError(const char * error) {
 }
 
 char * intToStr(int num) {
-    char * str = malloc((int)((ceil(log10(num))+1)*sizeof(char)));
-    sprintf(str, "%d", num);
+    int len = snprintf(NULL, 0, "%d", num);
+    char * str = malloc(len + 1);
+    if (str == NULL) return NULL;
+    snprintf(str, len + 1, "%d", num);
     return str;
 }
 

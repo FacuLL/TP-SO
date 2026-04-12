@@ -32,7 +32,13 @@ Arguments arguments = {
     .players_paths = {NULL}
 }; 
 
+void printWelcome(Arguments arguments, Game * game);
+
 void initializeGame(Game * game, Arguments * arguments);
+
+void freeFds(Game * game, int fds[][2]);
+
+void freeAll(Game * game, SyncState * sync, char * width, char * height, int fds[][2]);
 
 int main(int argc, char *argv[])
 {
@@ -46,12 +52,20 @@ int main(int argc, char *argv[])
     
     unsigned long gameSize = sizeof(Game) + arguments.width * arguments.height * sizeof(char);
     Game *game = initializeShared(SHARED_GAME, gameSize);
-    if (game == NULL) return 1;
+    if (game == NULL) {
+        freeAll(game, NULL, NULL, NULL, NULL);
+        perror("Error al inicializar memoria compartida del estado del juego");
+        exit(EXIT_FAILURE);
+    }
     initializeGame(game, &arguments);
     char (*board)[game->width] = (char (*)[game->width])game->board;
 
     SyncState * sync = initializeShared(SHARED_SYNC, sizeof(SyncState));
-    if (sync == NULL) return 1;
+    if (sync == NULL) {
+        freeAll(game, sync, NULL, NULL, NULL);
+        perror("Error al inicializar memoria compartida de sincronización");
+        exit(EXIT_FAILURE);
+    }
 
     char * width = intToStr(game->width);
     char * height = intToStr(game->height);
@@ -59,46 +73,20 @@ int main(int argc, char *argv[])
     //Inicializamos los semaforos
     initializeSemaphores(sync, game);
 
-    system("clear");
-
-    printf(
-        "width: %d\n"
-        "height: %d\n"
-        "delay: %d ms\n"
-        "timeout: %d s\n"
-        "seed: %d\n"
-        "view: %s\n"
-        "num_players: %d\n",
-        arguments.width, 
-        arguments.height, 
-        arguments.delay, 
-        arguments.timeout,
-        arguments.seed,
-        arguments.view_path == NULL ? "-" : arguments.view_path,
-        arguments.num_players
-    );
-    FOR_EACH_PLAYER(game, i) {
-        printf("\t%s\n", arguments.players_paths[i]);
-    }
-
-    sleep(2);
-    system("clear");
-    
-    //Inicializamos la vista 
-    int view_pid;
-    if (arguments.view_path != NULL) {
-        if ((view_pid = fork()) == 0) {
-            char * argsv[] = { arguments.view_path, width, height, NULL };
-            execvp(arguments.view_path, argsv);
-        }
-    }
+    printWelcome(arguments, game);
 
     //Configuración nesesaria para los pipes
     int fd[game->num_players][2];
+    for (int i = 0; i < game->num_players; i++) {
+        fd[i][0] = -1;
+        fd[i][1] = -1;
+    }
+
     for(int i = 0 ; i < game->num_players ; i++){
         //Inicialización de pipes
         if(pipe(fd[i]) == -1) {
-            perror("pipe");
+            freeAll(game, sync, height, width, fd);
+            perror("Error al inicializar pipes");
             exit(EXIT_FAILURE);
         }
         
@@ -106,25 +94,41 @@ int main(int argc, char *argv[])
         int player_pid = fork();
 
         if(player_pid == -1){
-            perror("fork");
+            perror("Error en fork");
+            freeAll(game, sync, height, width, fd);
             exit(EXIT_FAILURE);
         } else if (player_pid == 0){
             //Se redirige el pipe 
-            close(fd[i][0]);
             dup2(fd[i][1], STDOUT_FILENO);
-            close(fd[i][1]);
 
-            game->players[i].pid = getpid();
+            freeFds(game, fd);
 
-            //NO SACAR EL NULL, *args debe terminar en el. Se elimino momentaneamente y causo MUCHOS problemas
             char *args[] = {arguments.players_paths[i], width, height, NULL};
 
-            //LLamamos al programa de la dirección correspondiente
+            //Llamamos al programa de la dirección correspondiente solo cuando ya esta listo el estado (sobre todo los pids)
+            sem_wait(&sync->can_player_move[i]);
+            sem_post(&sync->can_player_move[i]);
+
             execvp(args[0], args);
-            perror("Un jugador genera un error"); 
-            exit(1);
+            perror("Un jugador genera un error");
+            exit(EXIT_FAILURE);
         } else{
+            game->players[i].pid = player_pid;
+
             close(fd[i][1]);
+            fd[i][1] = -1;
+        }
+    }
+
+    //Inicializamos la vista 
+    int view_pid;
+    if (arguments.view_path != NULL) {
+        if ((view_pid = fork()) == 0) {
+            freeFds(game, fd);
+            char * argsv[] = { arguments.view_path, width, height, NULL };
+            execvp(arguments.view_path, argsv);
+            perror("La vista genera error");
+            exit(EXIT_FAILURE);
         }
     }
     
@@ -139,12 +143,18 @@ int main(int argc, char *argv[])
     // Logica en cada tick
     while (!game->game_over) {
         // Escuchamos acciones
+        int max_fd = -1;
         FD_ZERO(&set);
         FOR_EACH_PLAYER(game, i) {
-            if (!game->players[i].blocked) FD_SET(fd[i][0], &set);
+            if (!game->players[i].blocked) {
+                FD_SET(fd[i][0], &set);
+                if (fd[i][0] > max_fd) {
+                    max_fd = fd[i][0];
+                }
+            }
         }
         struct timeval timeout = {.tv_sec = arguments.timeout};
-        int ret = select(FD_SETSIZE, &set, NULL, NULL, &timeout);
+        int ret = select(max_fd + 1, &set, NULL, NULL, &timeout);
         if (ret == 0) {
             sem_wait(&sync->master_priority);
             sem_wait(&sync->can_access_game_state);
@@ -257,34 +267,53 @@ int main(int argc, char *argv[])
         }
     }
 
-    if (arguments.view_path != NULL) {
-        sem_post(&sync->has_to_print);
-        sem_wait(&sync->view_finished);
-    }
-    
     // Limpieza
     int status;
 
-    waitpid(view_pid, &status, 0);
-    printf("View exited (%d)\n", status);
+    if (arguments.view_path != NULL) {
+        sem_post(&sync->has_to_print);
+        sem_wait(&sync->view_finished);
+        waitpid(view_pid, &status, 0);
+        printf("View exited (%d)\n", status);
+    }
 
     FOR_EACH_PLAYER(game, i) {
-        close(fd[i][0]);
         waitpid(game->players[i].pid, &status, 0);
         printf("Player %s (%d) exited (%d) with a score of %d / %d / %d\n", arguments.players_paths[i], i, status, game->players[i].score, game->players[i].valid_moves, game->players[i].invalid_moves);
     }
 
-    free(width);
-    free(height);
-    
-    munmap(game, gameSize);
-    munmap(sync, sizeof(SyncState));
-    shm_unlink(SHARED_GAME);
-    shm_unlink(SHARED_SYNC);
+    freeAll(game, sync, height, width, fd);
 
     printf("Terminado");
 
     return 0;
+}
+
+void printWelcome(Arguments arguments, Game * game) {
+    system("clear");
+
+    printf(
+        "width: %d\n"
+        "height: %d\n"
+        "delay: %d ms\n"
+        "timeout: %d s\n"
+        "seed: %d\n"
+        "view: %s\n"
+        "num_players: %d\n",
+        arguments.width, 
+        arguments.height, 
+        arguments.delay, 
+        arguments.timeout,
+        arguments.seed,
+        arguments.view_path == NULL ? "-" : arguments.view_path,
+        arguments.num_players
+    );
+    FOR_EACH_PLAYER(game, i) {
+        printf("\t%s\n", arguments.players_paths[i]);
+    }
+
+    sleep(2);
+    system("clear");
 }
 
 void initializeGame(Game * game, Arguments * arguments) {
@@ -336,5 +365,41 @@ void initializeGame(Game * game, Arguments * arguments) {
 
         // Marcar celda con el ID del jugador (valores <= 0 indican jugador, -i para jugador i)
         board[y][x] = (char)(-i);
+    }
+}
+
+void freeFds(Game * game, int fds[][2]) {
+    if (fds != NULL) {
+        for (int i = 0; i < game->num_players; i++) {
+            for (int j = 0; j <= 1; j++) {
+                if (fds[i][j] != -1) {
+                    close(fds[i][j]);
+                    fds[i][j] = -1;
+                }
+            }
+        }
+    }
+}
+
+void freeAll(Game * game, SyncState * sync, char * height, char * width, int fds[][2]) {
+    freeFds(game, fds);
+
+    if (width != NULL) {
+        free(width);
+    }
+
+    if (height != NULL) {
+        free(height);
+    }
+
+    if (game != NULL) {
+        unsigned long gameSize = sizeof(Game) + arguments.width * arguments.height * sizeof(char);
+        munmap(game, gameSize);
+        shm_unlink(SHARED_GAME);
+    }
+
+    if (sync != NULL) {
+        munmap(sync, sizeof(SyncState));
+        shm_unlink(SHARED_SYNC);
     }
 }
