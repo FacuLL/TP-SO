@@ -260,7 +260,7 @@ int main(int argc, char *argv[])
         bool all_blocked = true;
         FOR_EACH_PLAYER(game, i) {
             if (!game->players[i].blocked) all_blocked = false;
-        }
+        } 
         if (all_blocked) {
             sem_wait(&sync->master_priority);
             sem_wait(&sync->can_access_game_state);

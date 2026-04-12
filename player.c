@@ -25,7 +25,7 @@ int main(int argc, char *argv[]){
 
     //Referencio las memorias compartidas
 
-    unsigned long gameSize = sizeof(Game) + width * height * sizeof(char) - sizeof(char);
+    unsigned long gameSize = sizeof(Game) + width * height * sizeof(char);
     Game *game = attachShared(SHARED_GAME, gameSize, false);
     if (game == NULL) return 1;
 

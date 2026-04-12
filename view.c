@@ -118,7 +118,7 @@ int main(int argc, char *argv[]) {
     int width = atoi(argv[1]);
     int height = atoi(argv[2]);
     
-    unsigned long gameSize = sizeof(Game) + (width * height - 1) * sizeof(char);
+    unsigned long gameSize = sizeof(Game) + width * height * sizeof(char);
     Game *game = attachShared(SHARED_GAME, gameSize, false);
     if (game == NULL) return 1;
 
