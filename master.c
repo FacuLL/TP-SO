@@ -131,6 +131,7 @@ int main(int argc, char *argv[])
         sem_post(&sync->can_player_move[i]);
     }
 
+    struct timeval timeout = {.tv_sec = arguments.timeout};
     fd_set set;
 
     int last_player_served = -1;
@@ -142,7 +143,6 @@ int main(int argc, char *argv[])
         FOR_EACH_PLAYER(game, i) {
             if (!game->players[i].blocked) FD_SET(fd[i][0], &set);
         }
-        struct timeval timeout = {.tv_sec = arguments.timeout};
         int ret = select(FD_SETSIZE, &set, NULL, NULL, &timeout);
         if (ret == 0) {
             sem_wait(&sync->master_priority);
@@ -192,6 +192,9 @@ int main(int argc, char *argv[])
                                 game->players[player].valid_moves++;
                                 game->players[player].x = nextX;
                                 game->players[player].y = nextY;
+
+                                // Reseteo el timeout
+                                timeout = (struct timeval) {.tv_sec = arguments.timeout};
 
                                 // Marcamos la celda con el ID del jugador (valor negativo)
                                 board[nextY][nextX] = (char)(-player);
