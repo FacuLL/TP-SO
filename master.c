@@ -223,7 +223,10 @@ int main(int argc, char *argv[])
                                 if (arguments.view_path != NULL) {
                                     sem_post(&sync->has_to_print);
                                     sem_wait(&sync->view_finished);
-                                    struct timespec delay = {.tv_nsec = arguments.delay * 1000000};
+                                    struct timespec delay = {
+                                        .tv_sec = arguments.delay / 1000, 
+                                        .tv_nsec = (arguments.delay % 1000) * 1000000
+                                    };
                                     nanosleep(&delay, &delay);
                                 }
                                 
