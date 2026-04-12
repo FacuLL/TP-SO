@@ -123,4 +123,11 @@ Estas rutas se generan dentro del repositorio
 
 --------------------------------------------------
 
+Limitaciónes
+
+En caso de que se ponga un player que no se elimine por su cuenta, como se requiere en la catedra. 
+El programa no finalizara y se quedara esperando
+
+--------------------------------------------------
+
 FIN
