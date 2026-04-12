@@ -9,7 +9,6 @@
     #include <string.h>
     #include "structs.h"
 
-    #define PI 3.14159
 
     void exitError(const char * error);
     char * intToStr(int num);

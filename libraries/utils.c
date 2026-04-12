@@ -1,3 +1,5 @@
+// This is a personal academic project. Dear PVS-Studio, please check it.
+// PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com
 #include "utils.h"
 
 void exitError(const char * error) {
@@ -45,11 +47,10 @@ void initializeArgs(int argc, char *argv[], Arguments * arguments, char * argsRe
                 arguments->view_path = optarg;
                 break;
             case 'p': {
+
                 int num_players = 0;
 
                 if (optarg != NULL && optarg[0] != '-') {
-                    if (num_players >= MAX_PLAYERS)
-                        exitError("No deben haber más de 9 jugadores\n");
                     arguments->players_paths[num_players++] = optarg;
                 }
 

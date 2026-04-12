@@ -1,3 +1,5 @@
+// This is a personal academic project. Dear PVS-Studio, please check it.
+// PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com
 #include <signal.h>
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -9,6 +11,7 @@
 #include "shared.h"
 #include "semaphores.h"
 #include "utils.h"
+#define _USE_MATH_DEFINES
 
 #define FOR_EACH_PLAYER(game, idx) for (int idx = 0; idx < (game)->num_players; idx++)
 #define ACCESS_GAME_STATE(code) \
@@ -38,7 +41,7 @@ void initializeGame(Game * game, Arguments * arguments);
 
 void freeFds(Game * game, int fds[][2]);
 
-void freeAll(Game * game, SyncState * sync, char * width, char * height, int fds[][2]);
+void freeAll(Game * game, SyncState * sync, char * height, char * width, int fds[][2]);
 
 int main(int argc, char *argv[])
 {
@@ -181,8 +184,7 @@ int main(int argc, char *argv[])
                     ssize_t bytes = read(fd[player][0], &move, sizeof(move));
                     if (bytes > 0) {
                         // 1. Validar:
-                        if (move >= 0 && move < 8) {
-    
+                        if (move < 8) {
                             sem_wait(&sync->master_priority);
                             sem_wait(&sync->can_access_game_state);
                             sem_post(&sync->master_priority);
@@ -279,7 +281,7 @@ int main(int argc, char *argv[])
 
     FOR_EACH_PLAYER(game, i) {
         waitpid(game->players[i].pid, &status, 0);
-        printf("Player %s (%d) exited (%d) with a score of %d / %d / %d\n", arguments.players_paths[i], i, status, game->players[i].score, game->players[i].valid_moves, game->players[i].invalid_moves);
+        printf("Player %s (%d) exited (%d) with a score of %u / %u / %u\n", arguments.players_paths[i], i, status, game->players[i].score, game->players[i].valid_moves, game->players[i].invalid_moves);
     }
 
     freeAll(game, sync, height, width, fd);
@@ -350,7 +352,7 @@ void initializeGame(Game * game, Arguments * arguments) {
         };
 
         // Definir posicion con simetria central
-        double angle = (2.0 * PI / game->num_players) * i - (PI / 2.0);
+        double angle = (2.0 * M_PI / game->num_players) * i - (M_PI / 2.0);
         int x = (int)(centerX + radiusX * cos(angle));
         int y = (int)(centerY + radiusY * sin(angle));
 
@@ -369,7 +371,7 @@ void initializeGame(Game * game, Arguments * arguments) {
 }
 
 void freeFds(Game * game, int fds[][2]) {
-    if (fds != NULL) {
+    if (fds != NULL && game != NULL) {
         for (int i = 0; i < game->num_players; i++) {
             for (int j = 0; j <= 1; j++) {
                 if (fds[i][j] != -1) {
@@ -381,7 +383,7 @@ void freeFds(Game * game, int fds[][2]) {
     }
 }
 
-void freeAll(Game * game, SyncState * sync, char * height, char * width, int fds[][2]) {
+void freeAll(Game * game, SyncState * sync, char * height, char * width, int fds[][2]){
     freeFds(game, fds);
 
     if (width != NULL) {

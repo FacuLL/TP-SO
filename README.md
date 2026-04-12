@@ -40,6 +40,18 @@ Make clean
 
 --------------------------------------------------
 
+TEST PVS
+
+Dentro de contenedor ejecutar: 
+
+cd ./root 
+
+Make clean
+
+Make test
+
+--------------------------------------------------
+
 EJECUCIÓN
 
 ./master [opciones]

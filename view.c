@@ -1,3 +1,5 @@
+// This is a personal academic project. Dear PVS-Studio, please check it.
+// PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
@@ -40,7 +42,7 @@ static void dibujar_tablero(Game *game, int ancho, int alto) {
                 int idx_jugador = (int)(-celda);
                 attron(COLOR_PAIR(COLOR_BASE_JUGADOR + idx_jugador) | A_BOLD);
                 bool es_cabeza = false;
-                if (idx_jugador >= 0 && idx_jugador < game->num_players) {
+                if (idx_jugador < game->num_players) {
                     Player *p = &game->players[idx_jugador];
                     es_cabeza = (p->x == (unsigned short)col && p->y == (unsigned short)fila);
                 }
