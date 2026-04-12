@@ -216,10 +216,9 @@ int main(int argc, char *argv[])
                                 }
 
                                 sem_post(&sync->can_access_game_state);
-                                
 
                                 sem_post(&sync->can_player_move[player]);
-                                
+
                                 // 3. Notificar y imprimir
                                 if (arguments.view_path != NULL) {
                                     sem_post(&sync->has_to_print);
@@ -252,8 +251,8 @@ int main(int argc, char *argv[])
                             game->players[player].blocked = true;
                         sem_post(&sync->can_access_game_state);
                     }
+                    last_player_served = player;
                 }
-                last_player_served++;
             }
         }
 
