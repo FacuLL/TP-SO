@@ -113,4 +113,14 @@ ESTRUCTURA DEL PROYECTO
 
 --------------------------------------------------
 
+RUTAS RELATIVAS
+
+Estas rutas se generan dentro del repositorio
+
+./view
+./master
+./player
+
+--------------------------------------------------
+
 FIN
