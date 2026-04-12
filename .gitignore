@@ -8,5 +8,7 @@ master_catedra
 player
 view
 .*
-
+report.tasks
+PVS-Studio.log
+strace_out
 *logs.txt
