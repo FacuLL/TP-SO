@@ -213,17 +213,18 @@ int main(int argc, char *argv[])
                                 }
 
                                 sem_post(&sync->can_access_game_state);
+                                
 
+                                sem_post(&sync->can_player_move[player]);
+                                
                                 // 3. Notificar y imprimir
                                 if (arguments.view_path != NULL) {
                                     sem_post(&sync->has_to_print);
                                     sem_wait(&sync->view_finished);
+                                    struct timespec delay = {.tv_nsec = arguments.delay * 1000000};
+                                    nanosleep(&delay, &delay);
                                 }
                                 
-                                sem_post(&sync->can_player_move[player]);
-
-                                struct timespec delay = {.tv_nsec = arguments.delay * 1000000};
-                                nanosleep(&delay, &delay);
                             } else {
                                 game->players[player].invalid_moves++;
                                 
