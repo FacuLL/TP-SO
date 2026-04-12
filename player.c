@@ -17,7 +17,7 @@ int vector = 0;
 int main(int argc, char *argv[]){
 
     if (argc != 3) {
-        exitError("Uso: ./view [width] [height]");
+        exitError("Uso: ./player [width] [height]");
     }
 
     int width = atoi(argv[1]);

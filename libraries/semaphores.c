@@ -22,3 +22,16 @@ void initSemaphore(sem_t *sem, unsigned int value) {
         exit(SEMAPHORE_EXIT_FAILURE);
     }
 }
+
+void destroySemaphores(SyncState * state, int num_players) {
+    if (state == NULL) return;
+
+    sem_destroy(&state->has_to_print);
+    sem_destroy(&state->view_finished);
+    sem_destroy(&state->master_priority);
+    sem_destroy(&state->can_access_game_state);
+    sem_destroy(&state->can_access_readers_count);
+    for (int i = 0; i < num_players; i++) {
+        sem_destroy(&state->can_player_move[i]);
+    }
+}

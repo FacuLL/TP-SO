@@ -1,5 +1,7 @@
 // This is a personal academic project. Dear PVS-Studio, please check it.
 // PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com
+
+#define _USE_MATH_DEFINES
 #include <signal.h>
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -12,7 +14,6 @@
 #include "semaphores.h"
 #include "utils.h"
 
-#define _USE_MATH_DEFINES
 #define FOR_EACH_PLAYER(game, idx) for (int idx = 0; idx < (game)->num_players; idx++)
 #define ACCESS_GAME_STATE(code) \
     do { \
@@ -65,7 +66,7 @@ int main(int argc, char *argv[])
 
     SyncState * sync = initializeShared(SHARED_SYNC, sizeof(SyncState));
     if (sync == NULL) {
-        freeAll(game, sync, NULL, NULL, NULL);
+        freeAll(game, NULL, NULL, NULL, NULL);
         perror("Error al inicializar memoria compartida de sincronización");
         exit(EXIT_FAILURE);
     }
@@ -94,7 +95,7 @@ int main(int argc, char *argv[])
         }
         
         //Creo nuevo proceso hijo
-        int player_pid = fork();
+        pid_t player_pid = fork();
 
         if(player_pid == -1){
             perror("Error en fork");
@@ -404,6 +405,7 @@ void freeAll(Game * game, SyncState * sync, char * height, char * width, int fds
     }
 
     if (sync != NULL) {
+        destroySemaphores(sync, arguments.num_players);
         munmap(sync, sizeof(SyncState));
         shm_unlink(SHARED_SYNC);
     }

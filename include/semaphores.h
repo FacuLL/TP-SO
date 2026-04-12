@@ -10,5 +10,6 @@
     #define SEMAPHORE_EXIT_FAILURE -1
 
     void initializeSemaphores(SyncState * state, Game * game);
+    void destroySemaphores(SyncState * state, int num_players);
 
 #endif
