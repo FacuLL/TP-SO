@@ -3,10 +3,9 @@
 #include "shared.h"
 
 void * initializeShared(const char * name, unsigned long size) {
-    // Limpieza preventiva
-    shm_unlink(name);
+    
 
-    int fd = shm_open(name, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);
+    int fd = shm_open(name , O_CREAT | O_RDWR, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);
     
     if (fd == -1) {
         fprintf(stderr, "Error al iniciar shared memory %s\n", name);
