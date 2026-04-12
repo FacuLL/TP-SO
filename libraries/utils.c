@@ -24,11 +24,11 @@ void initializeArgs(int argc, char *argv[], Arguments * arguments, char * argsRe
         switch (opt) {
             case 'w':
                 arguments->width = atoi(optarg);
-                if (arguments->width < 10) exitError("El width debe ser mayor o igual a 10");
+                if (arguments->width < 10) exitError("El width debe ser mayor o igual a 10 \n");
                 break;
             case 'h':
                 arguments->height = atoi(optarg);
-                if (arguments->height < 10) exitError("El height debe ser mayor o igual a 10");
+                if (arguments->height < 10) exitError("El height debe ser mayor o igual a 10 \n");
                 break;
             case 'd':
                 arguments->delay = atoi(optarg);
