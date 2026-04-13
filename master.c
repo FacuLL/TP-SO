@@ -116,6 +116,10 @@ int main(int argc, char *argv[])
         }
     }
 
+    FOR_EACH_PLAYER(game, i) {
+        sem_post(&sync->can_player_move[i]);
+    }
+
     //Inicializamos la vista 
     int view_pid;
     if (arguments.view_path != NULL) {
@@ -126,10 +130,6 @@ int main(int argc, char *argv[])
             perror("La vista genera error");
             exit(EXIT_FAILURE);
         }
-    }
-    
-    FOR_EACH_PLAYER(game, i) {
-        sem_post(&sync->can_player_move[i]);
     }
 
     fd_set set;
