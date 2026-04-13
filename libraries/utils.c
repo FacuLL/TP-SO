@@ -47,14 +47,14 @@ void initializeArgs(int argc, char *argv[], Arguments * arguments, char * argsRe
                 arguments->view_path = optarg;
                 break;
             case 'p': {
-
                 int num_players = 0;
 
+                // Capturar el primer argumento obligatorio de -p
                 if (optarg != NULL && optarg[0] != '-') {
                     arguments->players_paths[num_players++] = optarg;
                 }
 
-                // Collect any additional players that follow
+                // Capturar argumentos adicionales "extra" hasta llegar a la proxima flag o terminar los argumentos.
                 while (optind < argc && argv[optind][0] != '-') {
                     if (num_players >= MAX_PLAYERS)
                         exitError("No deben haber más de 9 jugadores\n");
