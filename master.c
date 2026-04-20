@@ -266,6 +266,21 @@ int main(int argc, char *argv[])
         printf("Player %s (%d) exited (%d) with a score of %u / %u / %u\n", arguments.players_paths[i], i, status, game->players[i].score, game->players[i].valid_moves, game->players[i].invalid_moves);
     }
 
+    mkfifo("/tmp/ganador", 0666);
+
+    pid_t view_2_pid = fork();
+
+    if(view_2_pid == 0){
+        char *args[] = {"./view2", NULL};
+        execvp(args[0], args);
+    }else{
+        int fd = open("/tmp/ganador" , O_WRONLY); 
+        write(fd, arguments.players_paths[0] , 1);
+        close(fd);
+    }
+
+    
+
     freeAll(game, sync, height, width, fd);
 
     return 0;
